@@ -1,0 +1,378 @@
+/* ═══════════════════════════════════════
+   style.css — TechNova (base unificada)
+   Uso: login + dashboard + componentes
+═══════════════════════════════════════ */
+
+/* ── VARIABLES ── */
+:root { /* Define variables globales reutilizables */
+
+  --tn-blue: #0f3d91;        /* Color principal */
+  --tn-blue-dark: #0a285f;   /* Tono más oscuro para hover */
+  --tn-cyan: #d4af37;        /* Acento dorado */
+  --tn-gold-soft: #f4e4a6;   /* Dorado claro */
+
+  --bg-page: #f7f9fc;        /* Fondo general de la página */
+  --bg-section: #ffffff;     /* Fondo de secciones */
+  --bg-card: #ffffff;        /* Fondo de tarjetas */
+
+  --text-primary: #14233f;   /* Texto principal */
+  --text-secondary: #35517f; /* Texto secundario */
+  --text-muted: #6a7895;     /* Texto tenue */
+
+  --border: #d8bf6b;         /* Color de bordes dorado */
+
+  --white: #ffffff;          /* Blanco reutilizable */
+  --shadow-soft: rgba(10, 40, 95, 0.12); /* Sombra suave */
+
+  --font-main: Arial, sans-serif; /* Fuente principal */
+  --font-mono: monospace;         /* Fuente tipo consola */
+}
+
+/* ── RESET ── */
+* { /* Aplica a todos los elementos */
+  margin: 0;          /* Elimina márgenes por defecto */
+  padding: 0;         /* Elimina padding por defecto */
+  box-sizing: border-box; /* Hace que padding y border no aumenten el tamaño */
+}
+
+/* ── BODY ── */
+body { /* Estilo base del documento */
+  font-family: var(--font-main); /* Aplica fuente principal */
+  background:
+    radial-gradient(circle at top, rgba(212, 175, 55, 0.12), transparent 28%),
+    var(--bg-page);              /* Fondo general */
+  color: var(--text-primary);    /* Color del texto */
+}
+
+/* ── UTILIDADES ── */
+.container { /* Contenedor centrado */
+  width: 90%;   /* Ocupa 90% del ancho */
+  margin: auto; /* Centra horizontalmente */
+}
+
+.hidden { /* Clase para ocultar elementos */
+  display: none; /* No se muestra en pantalla */
+}
+
+/* ── CARD BASE ── */
+.card { /* Tarjeta reutilizable */
+  background: var(--bg-card);  /* Fondo blanco */
+  border: 1px solid var(--border); /* Borde suave */
+  border-radius: 10px; /* Bordes redondeados */
+  padding: 15px; /* Espaciado interno */
+}
+
+/* ── BOTONES ── */
+.btn { /* Botón base */
+  padding: 10px 15px; /* Espaciado interno */
+  border: none;       /* Sin borde */
+  border-radius: 6px; /* Bordes redondeados */
+  cursor: pointer;    /* Cursor tipo botón */
+  font-size: 13px;    /* Tamaño de texto */
+}
+
+.btn-primary { /* Botón principal */
+  background: var(--tn-blue); /* Color azul */
+  color: var(--white);        /* Texto blanco */
+  box-shadow: 0 10px 20px rgba(15, 61, 145, 0.18);
+}
+
+.btn-primary:hover { /* Estado al pasar el mouse */
+  background: var(--tn-blue-dark); /* Azul más oscuro */
+}
+
+/* ── INPUTS ── */
+.input { /* Campos de entrada */
+  width: 100%; /* Ocupan todo el ancho */
+  padding: 10px; /* Espaciado interno */
+  border-radius: 6px; /* Bordes redondeados */
+  border: 1px solid var(--border); /* Borde */
+  background: var(--bg-section); /* Fondo gris claro */
+  font-size: 13px; /* Tamaño de texto */
+}
+
+.input:focus { /* Cuando el usuario hace clic */
+  outline: none; /* Quita borde por defecto */
+  border-color: var(--tn-cyan); /* Cambia color del borde */
+  box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.18);
+}
+
+/* ── LABEL ── */
+.label { /* Etiquetas de formularios */
+  font-size: 12px; /* Tamaño pequeño */
+  font-weight: bold; /* Negrita */
+  color: var(--tn-blue); /* Color azul */
+  margin-bottom: 4px; /* Espacio inferior */
+  display: block; /* Ocupa toda la línea */
+}
+
+/* ── ALERTAS ── */
+.alert { /* Contenedor base de alertas */
+  padding: 8px; /* Espaciado */
+  border-radius: 6px; /* Bordes redondeados */
+  font-size: 12px; /* Tamaño de texto */
+  margin-bottom: 10px; /* Separación inferior */
+}
+
+.alert-error { /* Alerta de error */
+  background: #fdebec; /* Fondo rojo claro */
+  color: #8e2430;      /* Texto rojo oscuro */
+}
+
+.alert-success { /* Alerta de éxito */
+  background: #daf5ee; /* Fondo verde claro */
+  color: #0d5a45;      /* Texto verde oscuro */
+}
+
+/* ── HEADER SIMPLE ── */
+.header { /* Barra superior */
+  background: var(--tn-blue); /* Fondo azul */
+  color: var(--white);        /* Texto blanco */
+  padding: 15px;              /* Espaciado interno */
+}
+
+/* ── LOGIN ── */
+.login-body { /* Fondo del login */
+  background:
+    linear-gradient(135deg, rgba(10, 40, 95, 0.97), rgba(15, 61, 145, 0.95)),
+    var(--tn-blue); /* Fondo principal */
+  min-height: 100vh; /* Altura mínima de toda la pantalla */
+  display: flex; /* Activa flexbox */
+  align-items: center; /* Centra verticalmente */
+  justify-content: center; /* Centra horizontalmente */
+}
+
+.login-card { /* Tarjeta del login */
+  width: 100%; /* Ocupa todo el ancho disponible */
+  max-width: 400px; /* Máximo 400px */
+}
+
+.login-wrapper {
+  width: 100%;
+  padding: 32px 16px;
+}
+
+.login-card-header {
+  background: linear-gradient(135deg, var(--tn-blue), #184fae);
+  color: var(--white);
+  border-bottom: 0;
+  box-shadow: inset 0 -3px 0 var(--tn-cyan);
+  padding: 24px 20px 18px;
+}
+
+.login-card-body {
+  padding: 28px 24px;
+}
+
+.login-card-footer {
+  background: #fffdf7;
+  border-top: 1px solid var(--border);
+  padding: 16px 24px 20px;
+}
+
+.login-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.login-desc {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.login-label {
+  color: var(--tn-blue);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.login-input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-height: 44px;
+}
+
+.login-input:focus {
+  border-color: var(--tn-cyan);
+  box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.2);
+}
+
+.btn-login {
+  background: var(--tn-blue);
+  border: none;
+  border-radius: 8px;
+  color: var(--white);
+  font-size: 0.95rem;
+  font-weight: 600;
+  min-height: 44px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.btn-login:hover,
+.btn-login:focus {
+  background: var(--tn-blue-dark);
+  color: var(--white);
+  transform: translateY(-1px);
+}
+
+.btn-login:disabled {
+  opacity: 0.7;
+  transform: none;
+}
+
+.register-link {
+  color: #b38716;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+.register-link:hover,
+.register-link:focus {
+  color: #8c6810;
+  text-decoration: none;
+}
+
+.invalid-feedback {
+  font-size: 0.8rem;
+}
+
+.project-card {
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 14px 30px var(--shadow-soft);
+  border-top: 3px solid var(--tn-cyan);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.project-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 36px rgba(10, 40, 95, 0.18);
+}
+
+.project-card .card-body {
+  padding: 1.25rem;
+}
+
+.project-card .card-title {
+  color: var(--tn-blue-dark);
+}
+
+.project-meta {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.navbar.bg-dark {
+  background: linear-gradient(135deg, var(--tn-blue-dark), var(--tn-blue)) !important;
+  box-shadow: 0 10px 26px rgba(10, 40, 95, 0.2);
+  border-bottom: 2px solid var(--tn-cyan);
+}
+
+.navbar-brand {
+  color: var(--white) !important;
+  font-weight: 700;
+}
+
+.bg-primary {
+  background: linear-gradient(135deg, var(--tn-blue), #184fae) !important;
+  box-shadow: inset 0 -2px 0 var(--tn-cyan);
+}
+
+.btn-secondary {
+  background: #fffdf7;
+  border: 1px solid var(--border);
+  color: var(--tn-blue-dark);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+  background: var(--tn-gold-soft);
+  border-color: var(--tn-cyan);
+  color: var(--tn-blue-dark);
+}
+
+.btn-outline-light {
+  border-color: rgba(255, 255, 255, 0.78);
+  color: var(--white);
+}
+
+.btn-outline-light:hover,
+.btn-outline-light:focus {
+  background: var(--white);
+  border-color: var(--white);
+  color: var(--tn-blue-dark);
+}
+
+.modal-content {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 20px 40px rgba(10, 40, 95, 0.16);
+}
+
+.modal-header,
+.modal-footer {
+  border-color: var(--border);
+}
+
+.form-control:focus {
+  border-color: var(--tn-cyan);
+  box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.18);
+}
+
+.alert-light {
+  background: #fffdf7;
+  color: var(--text-secondary);
+  border-color: var(--border) !important;
+}
+
+.alert-danger {
+  background: #fdebec;
+  border-color: #f2c3c7;
+  color: #8e2430;
+}
+
+.alert-success {
+  background: #daf5ee;
+  border-color: #9fdecf;
+  color: #0d5a45;
+}
+
+/* ── TITULOS ── */
+.title { /* Título principal */
+  font-size: 18px; /* Tamaño grande */
+  font-weight: bold; /* Negrita */
+  margin-bottom: 10px; /* Separación */
+}
+
+.subtitle { /* Subtítulo */
+  font-size: 12px; /* Tamaño pequeño */
+  color: var(--text-muted); /* Color tenue */
+  margin-bottom: 15px; /* Separación */
+}
+
+/* ── FOOTER ── */
+.footer { /* Pie de página */
+  text-align: center; /* Centrado */
+  font-size: 11px; /* Tamaño pequeño */
+  color: var(--text-muted); /* Color tenue */
+  margin-top: 10px; /* Separación superior */
+}
+
+/* ── GRID SIMPLE ── */
+.row { /* Contenedor horizontal */
+  display: flex; /* Activa flexbox */
+  gap: 10px; /* Espacio entre columnas */
+}
+
+.col { /* Columna flexible */
+  flex: 1; /* Ocupa el mismo espacio que otras columnas */
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) { /* Para pantallas pequeñas */
+  .row {
+    flex-direction: column; /* Apila columnas verticalmente */
+  }
+}

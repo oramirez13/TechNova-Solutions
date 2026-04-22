@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TechNova Solutions — Gestión de Proyectos</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body class="login-body">
+    <div
+      class="login-wrapper d-flex align-items-center justify-content-center min-vh-100"
+    >
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4">
+            <!-- LOGIN -->
+            <div id="vistaLogin">
+              <div class="card login-card shadow-sm">
+                <div class="card-header login-card-header text-center">
+                  <h5 class="login-title mb-0">TechNova Solutions</h5>
+                  <small>Gestión de Proyectos</small>
+                </div>
+                <div class="card-body login-card-body">
+                  <p class="login-desc text-center mb-4">Inicia sesión</p>
+                  <form id="formLogin">
+                    <div class="form-group">
+                      <label for="loginEmail" class="login-label">Correo</label>
+                      <input
+                        type="email"
+                        id="loginEmail"
+                        class="form-control login-input"
+                        placeholder="usuario@example.com"
+                        required
+                      />
+                      <div class="invalid-feedback" id="errLoginEmail"></div>
+                    </div>
+                    <div class="form-group">
+                      <label for="loginPassword" class="login-label"
+                        >Contraseña</label
+                      >
+                      <input
+                        type="password"
+                        id="loginPassword"
+                        class="form-control login-input"
+                        placeholder="Tu contraseña"
+                        required
+                      />
+                      <div class="invalid-feedback" id="errLoginPassword"></div>
+                    </div>
+                    <button
+                      type="submit"
+                      id="btnLogin"
+                      class="btn btn-login btn-block mt-3"
+                    >
+                      Ingresar
+                    </button>
+                  </form>
+                  <div id="alertLogin" class="alert mt-3 d-none"></div>
+                </div>
+                <div class="card-footer login-card-footer text-center">
+                  <small>¿No tienes cuenta?</small>
+                  <a href="#" id="irARegistro" class="register-link"
+                    >Regístrate aquí</a
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- REGISTRO -->
+            <div id="vistaRegistro" class="d-none">
+              <div class="card login-card shadow-sm">
+                <div class="card-header login-card-header text-center">
+                  <h5 class="login-title mb-0">TechNova Solutions</h5>
+                  <small>Nueva cuenta</small>
+                </div>
+                <div class="card-body login-card-body">
+                  <p class="login-desc text-center mb-4">Regístrate</p>
+                  <form id="formRegistro">
+                    <div class="form-group">
+                      <label for="regNombre" class="login-label">Nombre</label>
+                      <input
+                        type="text"
+                        id="regNombre"
+                        class="form-control login-input"
+                        placeholder="Tu nombre completo"
+                        maxlength="100"
+                        required
+                      />
+                      <div class="invalid-feedback" id="errRegNombre"></div>
+                    </div>
+                    <div class="form-group">
+                      <label for="regEmail" class="login-label">Correo</label>
+                      <input
+                        type="email"
+                        id="regEmail"
+                        class="form-control login-input"
+                        placeholder="tu@example.com"
+                        required
+                      />
+                      <div class="invalid-feedback" id="errRegEmail"></div>
+                    </div>
+                    <div class="form-group">
+                      <label for="regRol" class="login-label">Rol</label>
+                      <select
+                        id="regRol"
+                        class="form-control login-input"
+                        required
+                      >
+                        <option value="">Selecciona tu rol</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Developer">Developer</option>
+                        <option value="Designer">Designer</option>
+                        <option value="QA">QA</option>
+                      </select>
+                      <div class="invalid-feedback" id="errRegRol"></div>
+                    </div>
+                    <div class="form-group">
+                      <label for="regPassword" class="login-label"
+                        >Contraseña</label
+                      >
+                      <input
+                        type="password"
+                        id="regPassword"
+                        class="form-control login-input"
+                        placeholder="Mínimo 6 caracteres"
+                        minlength="6"
+                        required
+                      />
+                      <div class="invalid-feedback" id="errRegPassword"></div>
+                    </div>
+                    <button
+                      type="submit"
+                      id="btnRegistrar"
+                      class="btn btn-login btn-block mt-3"
+                    >
+                      Registrarse
+                    </button>
+                  </form>
+                  <div id="alertRegistro" class="alert mt-3 d-none"></div>
+                </div>
+                <div class="card-footer login-card-footer text-center">
+                  <small>¿Ya tienes cuenta?</small>
+                  <a href="#" id="irALogin" class="register-link"
+                    >Inicia sesión</a
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script
+      src="https://code.jquery.com/jquery-3.7.1.js"
+      integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4="
+      crossorigin="anonymous"
+    ></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  </body>
+</html>
