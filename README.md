@@ -1,19 +1,21 @@
-# TechNova Solutions for PythonAnywhere
+# TechNova Solutions for PythonAnywhere Free
 
-Esta version de `technova_solutions_render` quedo adaptada para desplegarse en PythonAnywhere con MySQL, sin tocar el proyecto original fuera de `flask/`.
+Esta version de `technova_solutions_render` quedo adaptada para funcionar en PythonAnywhere gratis usando SQLite, sin tocar el proyecto original fuera de `flask/`.
 
-La app tambien conserva compatibilidad con PostgreSQL si defines `DATABASE_URL` o `TECHNOVA_DB_ENGINE=postgres`.
+La app tambien conserva compatibilidad con PostgreSQL y MySQL si en otro entorno defines `DATABASE_URL` o `TECHNOVA_DB_ENGINE`.
 
 ## Archivos clave
 
-- `app.py`: ahora detecta si debe usar MySQL o PostgreSQL
-- `database/schema_pythonanywhere.sql`: esquema listo para importar en MySQL de PythonAnywhere
-- `pythonanywhere_wsgi.py`: plantilla de WSGI para copiar al panel de PythonAnywhere
-- `requirements.txt`: incluye dependencias para ambos motores
+- `app.py`: ahora soporta SQLite, PostgreSQL y MySQL
+- `database/schema_sqlite.sql`: esquema y datos iniciales para SQLite
+- `pythonanywhere_wsgi.py`: plantilla de WSGI para PythonAnywhere gratis
+- `requirements.txt`: dependencias del proyecto
 
-## 1. Subir o clonar el proyecto
+## Despliegue en PythonAnywhere gratis
 
-En la consola Bash de PythonAnywhere:
+## 1. Clonar el proyecto
+
+En la consola Bash:
 
 ```bash
 git clone https://github.com/oramirez13/TechNova-Solutions.git
@@ -28,26 +30,7 @@ workon technova-pa
 pip install -r requirements.txt
 ```
 
-## 3. Crear la base MySQL
-
-En la pestaña `Databases` de PythonAnywhere:
-
-1. define tu password de MySQL
-2. crea una base llamada `technova`
-3. anota:
-   - tu usuario de PythonAnywhere
-   - el host MySQL
-   - el nombre real de la base, que sera `tuusuario$technova`
-
-## 4. Importar el esquema
-
-Desde Bash:
-
-```bash
-mysql -u tuusuario -h tuusuario.mysql.pythonanywhere-services.com -p 'tuusuario$technova' < database/schema_pythonanywhere.sql
-```
-
-## 5. Crear la web app
+## 3. Crear la web app
 
 En la pestaña `Web`:
 
@@ -60,26 +43,34 @@ En la pestaña `Web`:
 /home/tuusuario/.virtualenvs/technova-pa
 ```
 
-## 6. Configurar WSGI
+## 4. Configurar WSGI
 
-Abre el archivo WSGI de PythonAnywhere y usa como base el contenido de `pythonanywhere_wsgi.py`.
+Abre el archivo WSGI de PythonAnywhere y usa como base `pythonanywhere_wsgi.py`.
 
-Debes ajustar estos valores:
+Debes ajustar:
 
 - `PROJECT_HOME`
-- `TECHNOVA_DB_HOST`
-- `TECHNOVA_DB_USER`
-- `TECHNOVA_DB_PASSWORD`
-- `TECHNOVA_DB_NAME`
+- `TECHNOVA_SQLITE_PATH`
 - `SECRET_KEY`
 
-La importacion final debe quedar asi:
+Ejemplo:
 
 ```python
+import os
+import sys
+
+PROJECT_HOME = "/home/tuusuario/TechNova-Solutions/flask/technova_solutions_render"
+if PROJECT_HOME not in sys.path:
+    sys.path.insert(0, PROJECT_HOME)
+
+os.environ["TECHNOVA_DB_ENGINE"] = "sqlite"
+os.environ["TECHNOVA_SQLITE_PATH"] = "/home/tuusuario/TechNova-Solutions/flask/technova_solutions_render/database/technova.sqlite3"
+os.environ["SECRET_KEY"] = "cambia-esto-por-una-clave-segura"
+
 from app import app as application
 ```
 
-## 7. Configurar archivos estaticos
+## 5. Configurar archivos estaticos
 
 En `Static files` agrega:
 
@@ -88,22 +79,38 @@ En `Static files` agrega:
 
 Luego pulsa `Reload`.
 
-## 8. Variables de entorno que usa la app
+## 6. Base de datos SQLite
 
-### Para PythonAnywhere con MySQL
+No necesitas usar la pestaña `Databases`.
+
+La app crea automaticamente `database/technova.sqlite3` en el primer arranque usando `database/schema_sqlite.sql`.
+
+Si quieres inicializarla manualmente antes del reload:
+
+```bash
+cd ~/TechNova-Solutions/flask/technova_solutions_render
+workon technova-pa
+python -c "import app; print(app.SQLITE_PATH)"
+```
+
+## 7. Usuarios de ejemplo
+
+- `orami@technova.cr` / `017240`
+- `maria@technova.cr` / `123456`
+- `carlos@technova.cr` / `123456`
+- `ana@technova.cr` / `123456`
+
+## Variables de entorno
+
+### Para PythonAnywhere gratis con SQLite
 
 ```text
-TECHNOVA_DB_ENGINE=mysql
-TECHNOVA_DB_HOST=tuusuario.mysql.pythonanywhere-services.com
-TECHNOVA_DB_USER=tuusuario
-TECHNOVA_DB_PASSWORD=tu-password-mysql
-TECHNOVA_DB_NAME=tuusuario$technova
+TECHNOVA_DB_ENGINE=sqlite
+TECHNOVA_SQLITE_PATH=/home/tuusuario/TechNova-Solutions/flask/technova_solutions_render/database/technova.sqlite3
 SECRET_KEY=una-clave-secreta-segura
 ```
 
 ### Para PostgreSQL
-
-Opciones validas:
 
 ```text
 DATABASE_URL=postgresql://usuario:password@host:5432/technova
@@ -120,15 +127,18 @@ TECHNOVA_DB_PASSWORD=technova_app_2026
 TECHNOVA_DB_NAME=technova
 ```
 
-## 9. Usuarios de ejemplo
+### Para MySQL
 
-- `orami@technova.cr` / `017240`
-- `maria@technova.cr` / `123456`
-- `carlos@technova.cr` / `123456`
-- `ana@technova.cr` / `123456`
+```text
+TECHNOVA_DB_ENGINE=mysql
+TECHNOVA_DB_HOST=tu-host
+TECHNOVA_DB_USER=tuusuario
+TECHNOVA_DB_PASSWORD=tu-password
+TECHNOVA_DB_NAME=tu-base
+```
 
 ## Notas
 
 - Esta adaptacion no modifica nada fuera de `flask/`.
-- PythonAnywhere no publica la app ejecutando `python app.py`; la publica via WSGI.
-- Si tu cuenta gratuita no tiene MySQL disponible, necesitaras un plan compatible o cambiar de motor.
+- PythonAnywhere publica la app via WSGI, no con `python app.py`.
+- En plan gratis, SQLite es la ruta recomendada porque no requiere MySQL.
