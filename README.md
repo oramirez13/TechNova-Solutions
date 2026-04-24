@@ -1,228 +1,134 @@
-# TechNova Solutions
+# TechNova Solutions for PythonAnywhere
 
-Aplicación web en Flask para gestión de usuarios, proyectos, sprints y avances, usando MySQL como base de datos.
+Esta version de `technova_solutions_render` quedo adaptada para desplegarse en PythonAnywhere con MySQL, sin tocar el proyecto original fuera de `flask/`.
 
-## Requisitos
+La app tambien conserva compatibilidad con PostgreSQL si defines `DATABASE_URL` o `TECHNOVA_DB_ENGINE=postgres`.
 
-- Python 3.10 o superior
-- MySQL Server 8.x o compatible
-- `pip`
-- Terminal con acceso a `mysql`
+## Archivos clave
 
-## Estructura importante
+- `app.py`: ahora detecta si debe usar MySQL o PostgreSQL
+- `database/schema_pythonanywhere.sql`: esquema listo para importar en MySQL de PythonAnywhere
+- `pythonanywhere_wsgi.py`: plantilla de WSGI para copiar al panel de PythonAnywhere
+- `requirements.txt`: incluye dependencias para ambos motores
 
-- `app.py`: servidor Flask
-- `database/schema.sql`: creación de base de datos, tablas y datos de ejemplo
-- `requirements.txt`: dependencias del proyecto
+## 1. Subir o clonar el proyecto
 
-## 1. Entrar al proyecto
-
-Desde la carpeta padre:
+En la consola Bash de PythonAnywhere:
 
 ```bash
-cd technova_solutions
+git clone https://github.com/oramirez13/TechNova-Solutions.git
+cd TechNova-Solutions/flask/technova_solutions_render
 ```
 
-## 2. Crear y activar entorno virtual
-
-En Linux o macOS:
+## 2. Crear virtualenv
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-En Windows con PowerShell:
-
-```powershell
-python -m venv venv
-venv\Scripts\Activate.ps1
-```
-
-## 3. Instalar dependencias
-
-```bash
+mkvirtualenv --python=/usr/bin/python3.10 technova-pa
+workon technova-pa
 pip install -r requirements.txt
 ```
 
-Esto instala:
+## 3. Crear la base MySQL
 
-- `Flask`
-- `mysql-connector-python`
+En la pestaña `Databases` de PythonAnywhere:
 
-## 4. Crear la base de datos en MySQL
+1. define tu password de MySQL
+2. crea una base llamada `technova`
+3. anota:
+   - tu usuario de PythonAnywhere
+   - el host MySQL
+   - el nombre real de la base, que sera `tuusuario$technova`
 
-La app, por defecto, intenta conectarse con estas credenciales:
+## 4. Importar el esquema
 
-- Base de datos: `technova`
-- Usuario: `technova_app`
-- Password: `technova_app_2026`
-- Host: `localhost`
-
-### Opción recomendada: crear un usuario específico para la app
-
-Entrar a MySQL como administrador:
+Desde Bash:
 
 ```bash
-mysql -u root -p
+mysql -u tuusuario -h tuusuario.mysql.pythonanywhere-services.com -p 'tuusuario$technova' < database/schema_pythonanywhere.sql
 ```
 
-Luego ejecutar:
+## 5. Crear la web app
 
-```sql
-CREATE DATABASE IF NOT EXISTS technova
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_spanish_ci;
+En la pestaña `Web`:
 
-CREATE USER IF NOT EXISTS 'technova_app'@'localhost' IDENTIFIED BY 'technova_app_2026';
-GRANT ALL PRIVILEGES ON technova.* TO 'technova_app'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-## 5. Cargar el esquema y los datos iniciales
-
-Desde la carpeta `technova_solutions`, ejecutar:
-
-```bash
-mysql -u technova_app -p technova < database/schema.sql
-```
-
-Cuando MySQL pida la contraseña, ingresar:
+1. `Add a new web app`
+2. elige `Manual configuration`
+3. usa la misma version de Python del virtualenv
+4. en `Virtualenv` coloca:
 
 ```text
-technova_app_2026
+/home/tuusuario/.virtualenvs/technova-pa
 ```
 
-Este script:
+## 6. Configurar WSGI
 
-- crea las tablas `usuarios`, `proyectos`, `sprints` y `avances`
-- agrega índices
-- inserta datos de ejemplo
-- ejecuta consultas de verificación al final
+Abre el archivo WSGI de PythonAnywhere y usa como base el contenido de `pythonanywhere_wsgi.py`.
 
-## 6. Configurar variables de entorno
+Debes ajustar estos valores:
 
-La aplicación ya trae valores por defecto, así que si usaste el usuario `technova_app`, este paso es opcional.
+- `PROJECT_HOME`
+- `TECHNOVA_DB_HOST`
+- `TECHNOVA_DB_USER`
+- `TECHNOVA_DB_PASSWORD`
+- `TECHNOVA_DB_NAME`
+- `SECRET_KEY`
 
-Si quieres definirlas manualmente en Linux o macOS:
+La importacion final debe quedar asi:
 
-```bash
-export TECHNOVA_DB_HOST=localhost
-export TECHNOVA_DB_USER=technova_app
-export TECHNOVA_DB_PASSWORD=technova_app_2026
-export TECHNOVA_DB_NAME=technova
+```python
+from app import app as application
 ```
 
-En Windows con PowerShell:
+## 7. Configurar archivos estaticos
 
-```powershell
-$env:TECHNOVA_DB_HOST="localhost"
-$env:TECHNOVA_DB_USER="technova_app"
-$env:TECHNOVA_DB_PASSWORD="technova_app_2026"
-$env:TECHNOVA_DB_NAME="technova"
-```
+En `Static files` agrega:
 
-## 7. Levantar la aplicación Flask
+- URL: `/static/`
+- Directory: `/home/tuusuario/TechNova-Solutions/flask/technova_solutions_render/static`
 
-```bash
-python app.py
-```
+Luego pulsa `Reload`.
 
-La app arranca en:
+## 8. Variables de entorno que usa la app
+
+### Para PythonAnywhere con MySQL
 
 ```text
-http://127.0.0.1:5000
+TECHNOVA_DB_ENGINE=mysql
+TECHNOVA_DB_HOST=tuusuario.mysql.pythonanywhere-services.com
+TECHNOVA_DB_USER=tuusuario
+TECHNOVA_DB_PASSWORD=tu-password-mysql
+TECHNOVA_DB_NAME=tuusuario$technova
+SECRET_KEY=una-clave-secreta-segura
 ```
 
-`app.py` levanta Flask en modo debug y en el puerto `5000`.
+### Para PostgreSQL
 
-## 8. Probar acceso con usuarios de ejemplo
+Opciones validas:
 
-El `schema.sql` inserta estos usuarios:
+```text
+DATABASE_URL=postgresql://usuario:password@host:5432/technova
+```
+
+o
+
+```text
+TECHNOVA_DB_ENGINE=postgres
+TECHNOVA_DB_HOST=localhost
+TECHNOVA_DB_PORT=5432
+TECHNOVA_DB_USER=technova_app
+TECHNOVA_DB_PASSWORD=technova_app_2026
+TECHNOVA_DB_NAME=technova
+```
+
+## 9. Usuarios de ejemplo
 
 - `orami@technova.cr` / `017240`
 - `maria@technova.cr` / `123456`
 - `carlos@technova.cr` / `123456`
 - `ana@technova.cr` / `123456`
 
-Puedes iniciar sesión con cualquiera desde la pantalla principal.
+## Notas
 
-## 9. Verificación rápida si algo falla
-
-### Verificar que MySQL esté activo
-
-```bash
-mysql -u technova_app -p -e "SHOW DATABASES;"
-```
-
-### Verificar tablas creadas
-
-```bash
-mysql -u technova_app -p technova -e "SHOW TABLES;"
-```
-
-### Verificar usuarios cargados
-
-```bash
-mysql -u technova_app -p technova -e "SELECT id, nombre, correo, rol FROM usuarios;"
-```
-
-## 10. Problemas comunes
-
-### Error de conexión a MySQL
-
-Revisa:
-
-- que el servicio de MySQL esté encendido
-- que el usuario y la contraseña coincidan
-- que `TECHNOVA_DB_HOST`, `TECHNOVA_DB_USER`, `TECHNOVA_DB_PASSWORD` y `TECHNOVA_DB_NAME` estén correctos
-
-### Error `Access denied for user`
-
-Vuelve a crear el usuario y permisos:
-
-```sql
-CREATE USER IF NOT EXISTS 'technova_app'@'localhost' IDENTIFIED BY 'technova_app_2026';
-GRANT ALL PRIVILEGES ON technova.* TO 'technova_app'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-### Error porque las tablas ya existen o ya hay datos
-
-Si quieres reiniciar todo desde cero:
-
-```bash
-mysql -u root -p -e "DROP DATABASE IF EXISTS technova;"
-mysql -u root -p -e "CREATE DATABASE technova CHARACTER SET utf8mb4 COLLATE utf8mb4_spanish_ci;"
-mysql -u technova_app -p technova < database/schema.sql
-```
-
-## Flujo rápido
-
-Si ya tienes MySQL instalado, el flujo mínimo sería:
-
-```bash
-cd technova_solutions
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-mysql -u root -p
-```
-
-Dentro de MySQL:
-
-```sql
-CREATE DATABASE IF NOT EXISTS technova CHARACTER SET utf8mb4 COLLATE utf8mb4_spanish_ci;
-CREATE USER IF NOT EXISTS 'technova_app'@'localhost' IDENTIFIED BY 'technova_app_2026';
-GRANT ALL PRIVILEGES ON technova.* TO 'technova_app'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-De vuelta en terminal:
-
-```bash
-mysql -u technova_app -p technova < database/schema.sql
-python app.py
-```
+- Esta adaptacion no modifica nada fuera de `flask/`.
+- PythonAnywhere no publica la app ejecutando `python app.py`; la publica via WSGI.
+- Si tu cuenta gratuita no tiene MySQL disponible, necesitaras un plan compatible o cambiar de motor.
