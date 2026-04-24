@@ -1,6 +1,8 @@
 from decimal import Decimal
+from pathlib import Path
 import os
 import re
+import sqlite3
 
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
@@ -16,17 +18,22 @@ except ImportError:  # pragma: no cover - depende del entorno
     psycopg2 = None
 
 
+PROJECT_DIR = Path(__file__).resolve().parent
+DEFAULT_SQLITE_PATH = PROJECT_DIR / "database" / "technova.sqlite3"
+DEFAULT_SQLITE_SCHEMA = PROJECT_DIR / "database" / "schema_sqlite.sql"
+
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "technova_secret_2026")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 DB_ENGINE = os.getenv("TECHNOVA_DB_ENGINE", "").strip().lower()
+SQLITE_PATH = Path(os.getenv("TECHNOVA_SQLITE_PATH", str(DEFAULT_SQLITE_PATH))).expanduser()
 
 if not DB_ENGINE:
     if DATABASE_URL.startswith(("postgres://", "postgresql://")):
         DB_ENGINE = "postgres"
     else:
-        DB_ENGINE = "mysql"
+        DB_ENGINE = "sqlite"
 
 MYSQL_CONFIG = {
     "host": os.getenv("TECHNOVA_DB_HOST", "localhost"),
@@ -52,6 +59,35 @@ if DB_ENGINE == "postgres" and not DATABASE_URL:
     DATABASE_URL = construir_database_url()
 
 
+def preparar_sql(sql):
+    """Adapta placeholders para SQLite."""
+    if DB_ENGINE == "sqlite":
+        return sql.replace("%s", "?")
+    return sql
+
+
+def inicializar_sqlite_si_hace_falta():
+    """Crea la base SQLite con datos iniciales en el primer arranque."""
+    if DB_ENGINE != "sqlite":
+        return
+
+    SQLITE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    conn = sqlite3.connect(SQLITE_PATH)
+    try:
+        existe = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='usuarios'"
+        ).fetchone()
+        if existe:
+            return
+
+        script = DEFAULT_SQLITE_SCHEMA.read_text(encoding="utf-8")
+        conn.executescript(script)
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def obtener_conexion():
     """Abre una conexion a la base de datos configurada."""
     if DB_ENGINE == "postgres":
@@ -59,28 +95,41 @@ def obtener_conexion():
             raise RuntimeError("psycopg2 no esta instalado en este entorno.")
         return psycopg2.connect(DATABASE_URL)
 
-    if mysql is None:
-        raise RuntimeError("mysql-connector-python no esta instalado en este entorno.")
-    return mysql.connector.connect(**MYSQL_CONFIG)
+    if DB_ENGINE == "mysql":
+        if mysql is None:
+            raise RuntimeError("mysql-connector-python no esta instalado en este entorno.")
+        return mysql.connector.connect(**MYSQL_CONFIG)
+
+    conn = sqlite3.connect(SQLITE_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
 
 
 def obtener_cursor(conn):
     """Devuelve un cursor que retorna filas como diccionarios."""
     if DB_ENGINE == "postgres":
         return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    return conn.cursor(dictionary=True)
+    if DB_ENGINE == "mysql":
+        return conn.cursor(dictionary=True)
+    return conn.cursor()
 
 
 def obtener_error_bd():
     """Devuelve la excepcion base del motor configurado."""
     if DB_ENGINE == "postgres" and psycopg2 is not None:
         return psycopg2.Error
-    if mysql is not None:
+    if DB_ENGINE == "mysql" and mysql is not None:
         return mysql.connector.Error
-    return Exception
+    return sqlite3.Error
 
 
 DB_ERROR = obtener_error_bd()
+
+
+def ejecutar(cursor, sql, params=()):
+    """Ejecuta una sentencia respetando el placeholder del motor."""
+    cursor.execute(preparar_sql(sql), params)
 
 
 def ejecutar_insert(cursor, sql, params):
@@ -89,12 +138,12 @@ def ejecutar_insert(cursor, sql, params):
         cursor.execute(f"{sql}\nRETURNING id", params)
         return cursor.fetchone()["id"]
 
-    cursor.execute(sql, params)
+    cursor.execute(preparar_sql(sql), params)
     return cursor.lastrowid
 
 
 def serializar_fila(fila):
-    """Convierte fechas y decimales para que jsonify los soporte."""
+    """Convierte filas, fechas y decimales para que jsonify los soporte."""
     item = dict(fila)
     for clave, valor in item.items():
         if isinstance(valor, Decimal):
@@ -113,6 +162,9 @@ def validar_email(email):
 def validar_contrasena(password):
     """Valida que la contrasena tenga minimo 6 caracteres."""
     return len(password) >= 6
+
+
+inicializar_sqlite_si_hace_falta()
 
 
 @app.route("/")
@@ -161,7 +213,7 @@ def api_registro():
         conn = obtener_conexion()
         cursor = obtener_cursor(conn)
 
-        cursor.execute("SELECT id FROM usuarios WHERE correo = %s", (correo,))
+        ejecutar(cursor, "SELECT id FROM usuarios WHERE correo = %s", (correo,))
         if cursor.fetchone():
             return jsonify({"ok": False, "mensaje": "El correo ya esta registrado."}), 409
 
@@ -213,7 +265,7 @@ def api_login():
             FROM usuarios
             WHERE correo = %s AND password = %s AND activo = %s
         """
-        cursor.execute(sql, (correo, password, True))
+        ejecutar(cursor, sql, (correo, password, 1))
         usuario = cursor.fetchone()
 
         if not usuario:
@@ -274,7 +326,7 @@ def _get_proyectos():
             LEFT JOIN usuarios u ON p.responsable_id = u.id
             ORDER BY p.creado_en DESC
         """
-        cursor.execute(sql)
+        ejecutar(cursor, sql)
         proyectos = [serializar_fila(fila) for fila in cursor.fetchall()]
 
         return jsonify({"ok": True, "proyectos": proyectos}), 200
@@ -364,7 +416,7 @@ def _get_sprints(proyecto_id):
             WHERE proyecto_id = %s
             ORDER BY numero ASC
         """
-        cursor.execute(sql, (proyecto_id,))
+        ejecutar(cursor, sql, (proyecto_id,))
         sprints = [serializar_fila(fila) for fila in cursor.fetchall()]
 
         return jsonify({"ok": True, "sprints": sprints}), 200
@@ -453,7 +505,7 @@ def _get_avances(sprint_id):
             WHERE a.sprint_id = %s
             ORDER BY a.fecha_reporte DESC
         """
-        cursor.execute(sql, (sprint_id,))
+        ejecutar(cursor, sql, (sprint_id,))
         avances = [serializar_fila(fila) for fila in cursor.fetchall()]
 
         return jsonify({"ok": True, "avances": avances}), 200
