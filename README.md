@@ -50,9 +50,18 @@ El alcance actual no incluye una pantalla de auditoría ni un módulo visual de 
 - `app.py`: servidor Flask
 - `database/schema.sql`: creación de base de datos, tablas, índices y datos de ejemplo
 - `requirements.txt`: dependencias del proyecto
+- `docs/GUIA_TECNICA_TECHNOVA.md`: guía didáctica profunda del sistema y sus procesos
 - `templates/`: vistas HTML (`index`, `dashboard`, `blog`, `404` y componentes compartidos)
 - `static/js/dashboard.js`: lógica del dashboard, proyectos, sprints y kanban
 - `static/js/script.js`: login y registro
+
+## Guía de estudio recomendada
+
+Si quieres aprender el proyecto a fondo, empieza por:
+
+- `docs/GUIA_TECNICA_TECHNOVA.md`
+
+Esa guía explica arquitectura, tecnologías, procesos, seguridad, modelo de datos y responsabilidades de cada archivo antes de entrar al detalle del código.
 
 ## Modelo de datos actual
 
