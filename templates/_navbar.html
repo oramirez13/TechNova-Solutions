@@ -1,0 +1,60 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark app-navbar">
+  <div class="container">
+    <a
+      class="navbar-brand"
+      href="{{ url_for('pagina_dashboard') if usuario else url_for('pagina_inicio') }}"
+    >
+      <img
+        class="brand-logo"
+        src="{{ url_for('static', filename='img/infosec_orami_.png') }}"
+        alt="TechNova Solutions"
+      />
+      <span>TechNova Solutions</span>
+    </a>
+
+    {% if usuario %}
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-toggle="collapse"
+      data-target="#appNavbarMenu"
+      aria-controls="appNavbarMenu"
+      aria-expanded="false"
+      aria-label="Abrir menu"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse justify-content-end" id="appNavbarMenu">
+      <div class="navbar-nav align-items-lg-center ml-auto app-nav-panel">
+        <a
+          class="nav-link app-nav-link {% if pagina_activa == 'dashboard' %}active{% endif %}"
+          href="{{ url_for('pagina_dashboard') }}"
+        >
+          Dashboard
+        </a>
+        <a
+          class="nav-link app-nav-link {% if pagina_activa == 'blog' %}active{% endif %}"
+          href="{{ url_for('pagina_blog') }}"
+        >
+          Blog
+        </a>
+        <span id="usuarioNombre" class="navbar-text app-user-name"
+          >{{ usuario.nombre }}</span
+        >
+        <button
+          id="btnLogout"
+          type="button"
+          class="btn btn-sm btn-outline-light js-logout"
+        >
+          Cerrar sesion
+        </button>
+      </div>
+    </div>
+    {% else %}
+    <a class="btn btn-sm btn-outline-light" href="{{ url_for('pagina_inicio') }}">
+      Volver al inicio
+    </a>
+    {% endif %}
+  </div>
+</nav>

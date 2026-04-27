@@ -6,7 +6,8 @@
 --   1. usuarios      → Registro y login de usuarios
 --   2. proyectos     → Proyectos de la empresa
 --   3. sprints       → Sprints de cada proyecto
---   4. avances       → Registro de avances en sprints
+--   4. tareas        → Trabajo asignado y ordenado en kanban
+--   5. avances       → Registro de avances en sprints
 -- ══════════════════════════════════════════════════════════════
 
 
@@ -41,7 +42,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   -- NOT NULL: el campo es obligatorio
   correo VARCHAR(120) NOT NULL UNIQUE,
 
-  -- password: contraseña encriptada (con bcrypt en producción)
+  -- password: contraseña con hash seguro
   -- VARCHAR(255): texto de hasta 255 caracteres (para hash)
   -- NOT NULL: el campo es obligatorio
   password VARCHAR(255) NOT NULL,
@@ -178,6 +179,57 @@ CREATE TABLE IF NOT EXISTS sprints (
 
 
 -- ════════════════════════════════════════════
+-- TABLA: tareas
+-- Almacena tareas asignadas dentro del tablero kanban
+-- ════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS tareas (
+
+  id INT AUTO_INCREMENT PRIMARY KEY,
+
+  -- proyecto_id: referencia al proyecto de la tarea
+  proyecto_id INT NOT NULL,
+
+  -- sprint_id: sprint asociado; puede quedar NULL para backlog
+  sprint_id INT NULL,
+
+  -- titulo: nombre corto de la tarea
+  titulo VARCHAR(150) NOT NULL,
+
+  -- descripcion: detalle funcional o tecnico de la tarea
+  descripcion TEXT,
+
+  -- asignado_id: usuario responsable de ejecutar la tarea
+  asignado_id INT NULL,
+
+  -- prioridad: ayuda a priorizar dentro del proyecto
+  prioridad ENUM('baja','media','alta') NOT NULL DEFAULT 'media',
+
+  -- estado: columna actual dentro del kanban
+  estado ENUM('pendiente','en_progreso','en_revision','avances','completada') NOT NULL DEFAULT 'pendiente',
+
+  -- posicion: orden visual dentro de la columna
+  posicion INT NOT NULL DEFAULT 1,
+
+  -- fecha_limite: fecha objetivo de entrega
+  fecha_limite DATE,
+
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                          ON UPDATE CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_tarea_proyecto
+    FOREIGN KEY (proyecto_id) REFERENCES proyectos(id) ON DELETE CASCADE,
+
+  CONSTRAINT fk_tarea_sprint
+    FOREIGN KEY (sprint_id) REFERENCES sprints(id) ON DELETE SET NULL,
+
+  CONSTRAINT fk_tarea_asignado
+    FOREIGN KEY (asignado_id) REFERENCES usuarios(id) ON DELETE SET NULL
+
+) ENGINE=InnoDB;
+
+
+-- ════════════════════════════════════════════
 -- TABLA: avances
 -- Registra los avances en cada sprint
 -- ════════════════════════════════════════════
@@ -210,8 +262,8 @@ CREATE TABLE IF NOT EXISTS avances (
   horas_trabajadas DECIMAL(5,2),
 
   -- estado_tarea: estado de la tarea relacionada al avance
-  -- ENUM: pendiente, en_progreso, completada
-  estado_tarea ENUM('pendiente','en_progreso','completada') NOT NULL DEFAULT 'completada',
+  -- ENUM: pendiente, en_progreso, en_revision, avances, completada
+  estado_tarea ENUM('pendiente','en_progreso','en_revision','avances','completada') NOT NULL DEFAULT 'completada',
 
   -- fecha_reporte: fecha en que se registra el avance
   -- DATE: almacena solo la fecha
@@ -248,12 +300,19 @@ CREATE INDEX idx_proyectos_responsable ON proyectos(responsable_id);
 
 -- Índice para sprints de un proyecto
 CREATE INDEX idx_sprints_proyecto ON sprints(proyecto_id);
+CREATE UNIQUE INDEX uq_sprints_proyecto_numero ON sprints(proyecto_id, numero);
 
 -- Índice para avances de un sprint
 CREATE INDEX idx_avances_sprint ON avances(sprint_id);
 
 -- Índice para avances de un usuario
 CREATE INDEX idx_avances_usuario ON avances(usuario_id);
+
+-- Índices para kanban
+CREATE INDEX idx_tareas_proyecto ON tareas(proyecto_id);
+CREATE INDEX idx_tareas_sprint ON tareas(sprint_id);
+CREATE INDEX idx_tareas_asignado ON tareas(asignado_id);
+CREATE INDEX idx_tareas_kanban ON tareas(proyecto_id, estado, posicion);
 
 
 -- ════════════════════════════════════════════
@@ -262,10 +321,10 @@ CREATE INDEX idx_avances_usuario ON avances(usuario_id);
 
 -- Insertar usuarios de ejemplo
 INSERT INTO usuarios (nombre, correo, password, rol) VALUES
-  ('Osvaldo Ramírez', 'orami@technova.cr', '017240', 'Manager'),
-  ('María González', 'maria@technova.cr', '123456', 'Developer'),
-  ('Carlos López', 'carlos@technova.cr', '123456', 'Developer'),
-  ('Ana Rodríguez', 'ana@technova.cr', '123456', 'Designer');
+  ('Osvaldo Ramírez', 'orami@technova.cr', 'scrypt:32768:8:1$v5JOrx3bIt7Ne4VV$3bd7152a7720c7d800b22e75f42fe3c70f5b1940ccb4577061b3a1963db6c0ca8d2d82eeed14ebdf9c20c8f6f0bd6347db2ad94439439514b3a7423056340b6a', 'Manager'),
+  ('María González', 'maria@technova.cr', 'scrypt:32768:8:1$8Yh53SQIRVzUfxMt$94c8325285483413f441129244ebbc729fa93c39dd7bcae578e0dd5c742c3693495cf29a8c4dd44482bbb2c154941843cb3ab23e0a6ca9bf2888cc61d035bc8b', 'Developer'),
+  ('Carlos López', 'carlos@technova.cr', 'scrypt:32768:8:1$bqKryd4QS4umvZW0$44173539690d36bfcbd3e3ce3c5da8f202dc0cde2870c33792329208c3f57f9a8e5572e6b4478649b2229b75537b5c165f95eca9957a0f4ec0193b253c7ab9c0', 'Developer'),
+  ('Ana Rodríguez', 'ana@technova.cr', 'scrypt:32768:8:1$SmxKZgMvAswuTlia$0d0f8f1edbdff3c22ffb32e4ac8ea52cc7a20a6142ca14d394718f97803b935f510c125686d73ada407066a20b7f838e17ea5ab13dcf93218e5d73f6ccaee180', 'Designer');
 
 -- Insertar proyectos de ejemplo
 INSERT INTO proyectos (nombre, descripcion, estado, fecha_inicio, fecha_fin_estimada, responsable_id) VALUES
@@ -279,6 +338,13 @@ INSERT INTO sprints (proyecto_id, numero, nombre, descripcion, estado, fecha_ini
   (1, 2, 'Sprint 2 - Autenticación', 'Sistema de login y registro de usuarios', 'en_progreso', '2026-01-30', '2026-02-12', 75),
   (2, 1, 'Sprint 1 - Diseño UI', 'Diseño de interfaz gráfica de la aplicación', 'en_progreso', '2026-02-01', '2026-02-15', 60),
   (3, 1, 'Sprint 1 - Planificación', 'Análisis de requisitos y especificaciones', 'planificado', '2026-03-01', '2026-03-15', 0);
+
+-- Insertar tareas de ejemplo
+INSERT INTO tareas (proyecto_id, sprint_id, titulo, descripcion, asignado_id, prioridad, estado, posicion, fecha_limite) VALUES
+  (1, 2, 'Diseñar flujo de login', 'Definir campos, validaciones y estados del formulario.', 4, 'alta', 'en_revision', 1, '2026-02-05'),
+  (1, 2, 'Implementar API de autenticación', 'Conectar frontend con el endpoint de login.', 2, 'alta', 'en_progreso', 1, '2026-02-07'),
+  (1, 2, 'Pruebas de credenciales', 'Validar errores y accesos correctos.', 3, 'media', 'pendiente', 1, '2026-02-09'),
+  (2, 3, 'Crear mockups mobile', 'Preparar flujo visual de onboarding y dashboard.', 4, 'alta', 'avances', 1, '2026-02-08');
 
 -- Insertar avances de ejemplo
 INSERT INTO avances (sprint_id, usuario_id, descripcion, tipo_avance, horas_trabajadas, estado_tarea, fecha_reporte) VALUES
@@ -306,6 +372,11 @@ SELECT id, nombre, estado, fecha_inicio FROM proyectos;
 SELECT '' AS '';
 SELECT 'Sprints creados:' AS resultado;
 SELECT id, proyecto_id, numero, nombre, estado, objetivo_completado FROM sprints;
+
+-- Ver tareas
+SELECT '' AS '';
+SELECT 'Tareas registradas:' AS resultado;
+SELECT id, proyecto_id, sprint_id, titulo, estado, posicion FROM tareas;
 
 -- Ver avances
 SELECT '' AS '';

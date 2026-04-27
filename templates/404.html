@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TechNova - Error 404</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body class="error-page">
+    {% include '_navbar.html' %}
+
+    <main class="container error-shell">
+      <section class="error-card">
+        <span class="error-code">404</span>
+        <h1 class="error-title">La pagina que buscas no existe.</h1>
+        <p class="error-copy">
+          Es posible que el enlace este incompleto, haya cambiado o que la ruta
+          ya no se encuentre disponible.
+        </p>
+        <div class="error-actions">
+          {% if usuario %}
+          <a class="btn btn-primary" href="{{ url_for('pagina_dashboard') }}">
+            Ir al dashboard
+          </a>
+          <a class="btn btn-secondary" href="{{ url_for('pagina_blog') }}">
+            Ir al blog
+          </a>
+          {% else %}
+          <a class="btn btn-primary" href="{{ url_for('pagina_inicio') }}">
+            Volver al inicio
+          </a>
+          {% endif %}
+        </div>
+      </section>
+    </main>
+
+    <script
+      src="https://code.jquery.com/jquery-3.7.1.js"
+      integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4="
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+      crossorigin="anonymous"
+    ></script>
+    <script src="{{ url_for('static', filename='js/site.js') }}"></script>
+  </body>
+</html>

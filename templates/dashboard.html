@@ -3,7 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TechNova — Dashboard</title>
+    <title>TechNova - Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -15,55 +21,42 @@
       href="{{ url_for('static', filename='css/style.css') }}"
     />
   </head>
-  <body data-usuario-nombre="{{ usuario.nombre }}">
-    <!-- Header -->
-    <nav class="navbar navbar-dark bg-dark">
-      <div class="container">
-        <a class="navbar-brand" href="#">TechNova Solutions</a>
-        <div class="ml-auto">
-          <span id="usuarioNombre" class="text-white mr-3"
-            >{{ usuario.nombre }}</span
-          >
-          <button id="btnLogout" class="btn btn-sm btn-outline-light">
-            Cerrar sesión
-          </button>
-        </div>
-      </div>
-    </nav>
+  <body
+    data-usuario-nombre="{{ usuario.nombre }}"
+    data-usuario-id="{{ usuario.id }}"
+    data-usuario-correo="{{ usuario.correo }}"
+    data-usuario-rol="{{ usuario.rol }}"
+  >
+    {% include '_navbar.html' %}
 
-    <!-- Contenedor principal -->
-    <div class="container-fluid mt-4">
-      <div class="row">
-        <div class="col-12">
-          <h1>Panel de Proyectos</h1>
-          <button id="btnNuevoProyecto" class="btn btn-primary mb-3">
-            + Nuevo Proyecto
-          </button>
-        </div>
-      </div>
+    <main class="container-fluid mt-4 mb-5 dashboard-shell">
+      <div id="dashboardReactRoot" class="dashboard-react-root"></div>
 
-      <!-- Lista de proyectos -->
-      <div class="row" id="proyectosContainer">
-        <!-- Aquí se cargan los proyectos con JavaScript -->
-      </div>
-    </div>
+      <section class="dashboard-workspace-shell">
+        <div id="dashboardAlerts" class="mb-3"></div>
+        <div id="proyectosContainer"></div>
+      </section>
+    </main>
 
-    <!-- Modal: Nuevo Proyecto -->
     <div class="modal fade" id="modalProyecto" tabindex="-1" role="dialog">
       <div class="modal-dialog" role="document">
         <div class="modal-content">
           <div class="modal-header bg-primary text-white">
-            <h5 class="modal-title">Nuevo Proyecto</h5>
+            <h5 class="modal-title" id="modalProyectoTitulo">Nuevo Proyecto</h5>
             <button
               type="button"
               class="close text-white"
               data-dismiss="modal"
-            ></button>
+              aria-label="Cerrar"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
           </div>
           <div class="modal-body">
             <form id="formProyecto">
+              <input type="hidden" id="proyectoId" />
               <div class="form-group">
-                <label>Nombre</label>
+                <label for="proyectoNombre">Nombre</label>
                 <input
                   type="text"
                   id="proyectoNombre"
@@ -72,7 +65,7 @@
                 />
               </div>
               <div class="form-group">
-                <label>Descripción</label>
+                <label for="proyectoDescripcion">Descripcion</label>
                 <textarea
                   id="proyectoDescripcion"
                   class="form-control"
@@ -80,7 +73,7 @@
                 ></textarea>
               </div>
               <div class="form-group">
-                <label>Fecha de inicio</label>
+                <label for="proyectoFechaInicio">Fecha de inicio</label>
                 <input
                   type="date"
                   id="proyectoFechaInicio"
@@ -88,8 +81,26 @@
                   required
                 />
               </div>
-              <div class="form-group">
-                <label>Fecha estimada de fin</label>
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="proyectoEstado">Estado</label>
+                  <select id="proyectoEstado" class="form-control">
+                    <option value="activo">Activo</option>
+                    <option value="pausado">Pausado</option>
+                    <option value="completado">Completado</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </div>
+                <div class="form-group col-md-6">
+                  <label for="proyectoResponsableId">Responsable</label>
+                  <select
+                    id="proyectoResponsableId"
+                    class="form-control"
+                  ></select>
+                </div>
+              </div>
+              <div class="form-group mb-0">
+                <label for="proyectoFechaFin">Fecha estimada de fin</label>
                 <input type="date" id="proyectoFechaFin" class="form-control" />
               </div>
             </form>
@@ -107,7 +118,279 @@
               id="btnGuardarProyecto"
               class="btn btn-primary"
             >
-              Guardar
+              Guardar Proyecto
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modalSprint" tabindex="-1" role="dialog">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="modalSprintTitulo">Nuevo Sprint</h5>
+            <button
+              type="button"
+              class="close text-white"
+              data-dismiss="modal"
+              aria-label="Cerrar"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="formSprint">
+              <input type="hidden" id="sprintProyectoId" />
+              <input type="hidden" id="sprintId" />
+              <div class="form-row">
+                <div class="form-group col-md-4">
+                  <label for="sprintNumero">Numero</label>
+                  <input
+                    type="number"
+                    min="1"
+                    id="sprintNumero"
+                    class="form-control"
+                  />
+                </div>
+                <div class="form-group col-md-8">
+                  <label for="sprintNombre">Nombre</label>
+                  <input
+                    type="text"
+                    id="sprintNombre"
+                    class="form-control"
+                    required
+                  />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="sprintDescripcion">Descripcion</label>
+                <textarea
+                  id="sprintDescripcion"
+                  class="form-control"
+                  rows="3"
+                ></textarea>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="sprintFechaInicio">Fecha de inicio</label>
+                  <input
+                    type="date"
+                    id="sprintFechaInicio"
+                    class="form-control"
+                    required
+                  />
+                </div>
+                <div class="form-group col-md-6">
+                  <label for="sprintFechaFin">Fecha de fin</label>
+                  <input
+                    type="date"
+                    id="sprintFechaFin"
+                    class="form-control"
+                    required
+                  />
+                </div>
+              </div>
+              <div class="form-group mb-0">
+                <label for="sprintEstado">Estado</label>
+                <select id="sprintEstado" class="form-control">
+                  <option value="planificado">Planificado</option>
+                  <option value="en_progreso">En progreso</option>
+                  <option value="completado">Completado</option>
+                </select>
+              </div>
+              <div class="form-group mb-0">
+                <label for="sprintObjetivoCompletado">Avance (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  id="sprintObjetivoCompletado"
+                  class="form-control"
+                  value="0"
+                />
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button type="button" id="btnGuardarSprint" class="btn btn-primary">
+              Guardar Sprint
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modalTarea" tabindex="-1" role="dialog">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="modalTareaTitulo">Nueva Tarea</h5>
+            <button
+              type="button"
+              class="close text-white"
+              data-dismiss="modal"
+              aria-label="Cerrar"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="formTarea">
+              <input type="hidden" id="tareaProyectoId" />
+              <input type="hidden" id="tareaId" />
+              <div class="form-group">
+                <label for="tareaTitulo">Titulo</label>
+                <input
+                  type="text"
+                  id="tareaTitulo"
+                  class="form-control"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label for="tareaDescripcion">Descripcion</label>
+                <textarea
+                  id="tareaDescripcion"
+                  class="form-control"
+                  rows="3"
+                ></textarea>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="tareaSprintId">Sprint</label>
+                  <select id="tareaSprintId" class="form-control"></select>
+                </div>
+                <div class="form-group col-md-6">
+                  <label for="tareaAsignadoId">Asignar a</label>
+                  <select id="tareaAsignadoId" class="form-control"></select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-md-4">
+                  <label for="tareaPrioridad">Prioridad</label>
+                  <select id="tareaPrioridad" class="form-control">
+                    <option value="baja">Baja</option>
+                    <option value="media" selected>Media</option>
+                    <option value="alta">Alta</option>
+                  </select>
+                </div>
+                <div class="form-group col-md-4">
+                  <label for="tareaEstado">Columna</label>
+                  <select id="tareaEstado" class="form-control">
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_progreso">En progreso</option>
+                    <option value="en_revision">En revision</option>
+                    <option value="avances">Avances</option>
+                    <option value="completada">Completada</option>
+                  </select>
+                </div>
+                <div class="form-group col-md-4">
+                  <label for="tareaFechaLimite">Fecha limite</label>
+                  <input
+                    type="date"
+                    id="tareaFechaLimite"
+                    class="form-control"
+                  />
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button type="button" id="btnGuardarTarea" class="btn btn-primary">
+              Guardar Tarea
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modalAvance" tabindex="-1" role="dialog">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="modalAvanceTitulo">Nuevo Avance</h5>
+            <button
+              type="button"
+              class="close text-white"
+              data-dismiss="modal"
+              aria-label="Cerrar"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="formAvance">
+              <input type="hidden" id="avanceProyectoId" />
+              <input type="hidden" id="avanceSprintId" />
+              <input type="hidden" id="avanceId" />
+              <div class="form-group">
+                <label for="avanceDescripcion">Descripcion</label>
+                <textarea
+                  id="avanceDescripcion"
+                  class="form-control"
+                  rows="4"
+                  required
+                ></textarea>
+              </div>
+              <div class="form-row">
+                <div class="form-group col-md-6">
+                  <label for="avanceTipo">Tipo</label>
+                  <select id="avanceTipo" class="form-control">
+                    <option value="caracteristica">Caracteristica</option>
+                    <option value="bugfix">Bugfix</option>
+                    <option value="mejora">Mejora</option>
+                    <option value="documentacion">Documentacion</option>
+                    <option value="testing">Testing</option>
+                  </select>
+                </div>
+                <div class="form-group col-md-6">
+                  <label for="avanceHoras">Horas trabajadas</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.25"
+                    id="avanceHoras"
+                    class="form-control"
+                  />
+                </div>
+              </div>
+              <div class="form-group mb-0">
+                <label for="avanceEstadoTarea">Estado relacionado</label>
+                <select id="avanceEstadoTarea" class="form-control">
+                  <option value="pendiente">Pendiente</option>
+                  <option value="en_progreso">En progreso</option>
+                  <option value="en_revision">En revision</option>
+                  <option value="avances">Avances</option>
+                  <option value="completada">Completada</option>
+                </select>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button type="button" id="btnGuardarAvance" class="btn btn-primary">
+              Guardar Avance
             </button>
           </div>
         </div>
@@ -124,6 +407,16 @@
       integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
       crossorigin="anonymous"
     ></script>
+    <script
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script src="{{ url_for('static', filename='js/site.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard-react.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
   </body>
 </html>
