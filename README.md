@@ -201,6 +201,7 @@ Si quieres definirlas manualmente en Linux o macOS:
 
 ```bash
 export TECHNOVA_DB_HOST=localhost
+export TECHNOVA_DB_PORT=3307
 export TECHNOVA_DB_USER=technova_app
 export TECHNOVA_DB_PASSWORD=technova_app_2026
 export TECHNOVA_DB_NAME=technova
@@ -211,6 +212,7 @@ En Windows con PowerShell:
 
 ```powershell
 $env:TECHNOVA_DB_HOST="localhost"
+$env:TECHNOVA_DB_PORT="3307"
 $env:TECHNOVA_DB_USER="technova_app"
 $env:TECHNOVA_DB_PASSWORD="technova_app_2026"
 $env:TECHNOVA_DB_NAME="technova"

@@ -46,7 +46,13 @@ ESTADOS_SPRINT = {"planificado", "en_progreso", "completado"}
 ESTADOS_TAREA = {"pendiente", "en_progreso", "en_revision", "avances", "completada"}
 PRIORIDADES_TAREA = {"baja", "media", "alta"}
 TIPOS_AVANCE = {"caracteristica", "bugfix", "mejora", "documentacion", "testing"}
-ESTADOS_AVANCE_TAREA = {"pendiente", "en_progreso", "en_revision", "avances", "completada"}
+ESTADOS_AVANCE_TAREA = {
+    "pendiente",
+    "en_progreso",
+    "en_revision",
+    "avances",
+    "completada",
+}
 ROLES_PRIVILEGIADOS = {"Admin", "Manager"}
 schema_asegurado = False
 
@@ -74,10 +80,11 @@ def obtener_conexion():
         )
 
     return mysql.connector.connect(
-        host=os.getenv("TECHNOVA_DB_HOST", "localhost"),
+        host=os.getenv("TECHNOVA_DB_HOST", "127.0.0.1"),
         user=usuario,
         password=password,
         database=base_datos,
+        port=int(os.getenv("TECHNOVA_DB_PORT", 3307)),
         charset="utf8mb4",
     )
 
@@ -430,7 +437,9 @@ def pagina_dashboard():
 def pagina_blog():
     if "usuario" not in session:
         return redirect(url_for("pagina_inicio"))
-    return render_template("blog.html", usuario=session["usuario"], pagina_activa="blog")
+    return render_template(
+        "blog.html", usuario=session["usuario"], pagina_activa="blog"
+    )
 
 
 @app.errorhandler(404)
@@ -670,7 +679,10 @@ def _delete_proyecto(proyecto_id):
         cursor.execute("DELETE FROM proyectos WHERE id = %s", (proyecto_id,))
 
         conn.commit()
-        return jsonify({"ok": True, "mensaje": "Proyecto eliminado correctamente."}), 200
+        return (
+            jsonify({"ok": True, "mensaje": "Proyecto eliminado correctamente."}),
+            200,
+        )
 
     except mysql.connector.Error as err:
         if conn:
@@ -710,7 +722,10 @@ def _put_proyecto(proyecto_id):
         return jsonify({"ok": False, "mensaje": "Estado de proyecto inválido."}), 400
 
     if responsable_id is None:
-        return jsonify({"ok": False, "mensaje": "Selecciona un responsable válido."}), 400
+        return (
+            jsonify({"ok": False, "mensaje": "Selecciona un responsable válido."}),
+            400,
+        )
 
     try:
         fecha_inicio = parsear_fecha(fecha_inicio, "inicio")
@@ -735,9 +750,8 @@ def _put_proyecto(proyecto_id):
         if not existe_registro(cursor, "usuarios", responsable_id, filtro_activo=True):
             return jsonify({"ok": False, "mensaje": "Responsable inválido."}), 400
 
-        if (
-            not usuario_es_privilegiado()
-            and responsable_id != usuario_actual().get("id")
+        if not usuario_es_privilegiado() and responsable_id != usuario_actual().get(
+            "id"
         ):
             return (
                 jsonify(
@@ -772,7 +786,10 @@ def _put_proyecto(proyecto_id):
         )
         conn.commit()
 
-        return jsonify({"ok": True, "mensaje": "Proyecto actualizado correctamente."}), 200
+        return (
+            jsonify({"ok": True, "mensaje": "Proyecto actualizado correctamente."}),
+            200,
+        )
 
     except mysql.connector.Error as err:
         if conn:
@@ -927,9 +944,8 @@ def _post_proyecto():
         if not existe_registro(cursor, "usuarios", responsable_id, filtro_activo=True):
             return jsonify({"ok": False, "mensaje": "Responsable inválido."}), 400
 
-        if (
-            not usuario_es_privilegiado()
-            and responsable_id != usuario_actual().get("id")
+        if not usuario_es_privilegiado() and responsable_id != usuario_actual().get(
+            "id"
         ):
             return (
                 jsonify(
@@ -1043,12 +1059,17 @@ def _put_sprint(sprint_id):
 
     if not nombre or not fecha_inicio or not fecha_fin:
         return (
-            jsonify({"ok": False, "mensaje": "Completa el nombre y las fechas del sprint."}),
+            jsonify(
+                {"ok": False, "mensaje": "Completa el nombre y las fechas del sprint."}
+            ),
             400,
         )
 
     if numero is None or numero <= 0:
-        return jsonify({"ok": False, "mensaje": "El numero de sprint es obligatorio."}), 400
+        return (
+            jsonify({"ok": False, "mensaje": "El numero de sprint es obligatorio."}),
+            400,
+        )
 
     if estado not in ESTADOS_SPRINT:
         return jsonify({"ok": False, "mensaje": "Estado de sprint inválido."}), 400
@@ -1058,7 +1079,12 @@ def _put_sprint(sprint_id):
 
     if objetivo_completado < 0 or objetivo_completado > 100:
         return (
-            jsonify({"ok": False, "mensaje": "El avance del sprint debe estar entre 0 y 100."}),
+            jsonify(
+                {
+                    "ok": False,
+                    "mensaje": "El avance del sprint debe estar entre 0 y 100.",
+                }
+            ),
             400,
         )
 
@@ -1132,7 +1158,10 @@ def _put_sprint(sprint_id):
         )
         conn.commit()
 
-        return jsonify({"ok": True, "mensaje": "Sprint actualizado correctamente."}), 200
+        return (
+            jsonify({"ok": True, "mensaje": "Sprint actualizado correctamente."}),
+            200,
+        )
 
     except mysql.connector.Error as err:
         if conn:
@@ -1171,7 +1200,9 @@ def _post_sprint(proyecto_id):
 
     if not nombre or not fecha_inicio or not fecha_fin:
         return (
-            jsonify({"ok": False, "mensaje": "Completa el nombre y las fechas del sprint."}),
+            jsonify(
+                {"ok": False, "mensaje": "Completa el nombre y las fechas del sprint."}
+            ),
             400,
         )
 
@@ -1183,7 +1214,12 @@ def _post_sprint(proyecto_id):
 
     if objetivo_completado < 0 or objetivo_completado > 100:
         return (
-            jsonify({"ok": False, "mensaje": "El avance del sprint debe estar entre 0 y 100."}),
+            jsonify(
+                {
+                    "ok": False,
+                    "mensaje": "El avance del sprint debe estar entre 0 y 100.",
+                }
+            ),
             400,
         )
 
@@ -1333,7 +1369,9 @@ def api_tarea_kanban(tarea_id):
             return error
 
         if estado_origen != estado_destino:
-            normalizar_posiciones(cursor, proyecto_id, estado_origen, excluir_id=tarea_id)
+            normalizar_posiciones(
+                cursor, proyecto_id, estado_origen, excluir_id=tarea_id
+            )
 
         tareas_destino = normalizar_posiciones(
             cursor, proyecto_id, estado_destino, excluir_id=tarea_id
@@ -1427,7 +1465,10 @@ def _post_tarea(proyecto_id):
     fecha_limite = datos.get("fecha_limite") or None
 
     if not titulo:
-        return jsonify({"ok": False, "mensaje": "El titulo de la tarea es obligatorio."}), 400
+        return (
+            jsonify({"ok": False, "mensaje": "El titulo de la tarea es obligatorio."}),
+            400,
+        )
 
     if prioridad not in PRIORIDADES_TAREA:
         return jsonify({"ok": False, "mensaje": "Prioridad inválida."}), 400
@@ -1530,7 +1571,10 @@ def _put_tarea(tarea_id):
     fecha_limite = datos.get("fecha_limite") or None
 
     if not titulo:
-        return jsonify({"ok": False, "mensaje": "El titulo de la tarea es obligatorio."}), 400
+        return (
+            jsonify({"ok": False, "mensaje": "El titulo de la tarea es obligatorio."}),
+            400,
+        )
 
     if prioridad not in PRIORIDADES_TAREA:
         return jsonify({"ok": False, "mensaje": "Prioridad inválida."}), 400
@@ -1586,7 +1630,9 @@ def _put_tarea(tarea_id):
 
         posicion = None
         if estado != tarea_actual["estado"]:
-            normalizar_posiciones(cursor, proyecto_id, tarea_actual["estado"], excluir_id=tarea_id)
+            normalizar_posiciones(
+                cursor, proyecto_id, tarea_actual["estado"], excluir_id=tarea_id
+            )
             posicion = obtener_siguiente_posicion_tarea(cursor, proyecto_id, estado)
 
         cursor.execute(
@@ -1893,7 +1939,10 @@ def _put_avance(avance_id):
         )
         conn.commit()
 
-        return jsonify({"ok": True, "mensaje": "Avance actualizado correctamente."}), 200
+        return (
+            jsonify({"ok": True, "mensaje": "Avance actualizado correctamente."}),
+            200,
+        )
 
     except mysql.connector.Error as err:
         if conn:
