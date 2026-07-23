@@ -4,7 +4,7 @@
 # ══════════════════════════════════════════════════════════════
 
 # Imagen base ligera de Python
-FROM python:3.12-slim
+FROM python:3.12.8-slim
 
 # Evita que Python escriba archivos .pyc y fuerza salida directa
 ENV PYTHONDONTWRITEBYTECODE=1

@@ -1,4 +1,20 @@
 $(document).ready(function () {
+  var csrfToken = $('body').data('csrf-token');
+
+  $.ajaxSetup({
+    beforeSend: function (xhr, settings) {
+      if (settings.type && settings.type !== 'GET' && settings.type !== 'HEAD') {
+        if (settings.contentType && settings.contentType.indexOf('application/json') !== -1) {
+          var body = JSON.parse(settings.data || '{}');
+          body.csrf_token = csrfToken;
+          settings.data = JSON.stringify(body);
+        } else {
+          xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+        }
+      }
+    }
+  });
+
   var $contenedor = $('#proyectosContainer');
   var $alertas = $('#dashboardAlerts');
   var $modalProyecto = $('#modalProyecto');

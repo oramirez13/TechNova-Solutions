@@ -109,14 +109,14 @@ $(document).ready(function () {
       marcarInvalido(
         $('#regPassword'),
         'errRegPassword',
-        'La contrasena debe tener al menos 8 caracteres, una mayuscula, una minuscula y un numero.'
+        'La contrasena debe tener al menos 8 caracteres, una mayuscula, una minuscula, un numero y un caracter especial (!@#$%^&*).'
       );
       valido = false;
-    } else if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+    } else if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[!@#$%^&*]/.test(password)) {
       marcarInvalido(
         $('#regPassword'),
         'errRegPassword',
-        'La contrasena debe contener al menos una mayuscula, una minuscula y un numero.'
+        'La contrasena debe contener al menos una mayuscula, una minuscula, un numero y un caracter especial (!@#$%^&*).'
       );
       valido = false;
     } else {

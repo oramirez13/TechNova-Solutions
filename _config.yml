@@ -1,0 +1,11 @@
+exclude:
+  - database/
+  - static/
+  - templates/
+  - docs/
+  - Dockerfile
+  - docker-compose.yml
+  - .dockerignore
+  - .gitignore
+  - requirements.txt
+  - app.py

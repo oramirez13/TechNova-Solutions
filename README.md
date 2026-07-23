@@ -350,10 +350,17 @@ Revisar:
 - No escribir contrasenas reales en el README.
 - Cambiar `TECHNOVA_SECRET_KEY` antes de usar el proyecto fuera de un entorno local.
 - Usar contrasenas diferentes para cada ambiente.
-- La contrasena de registro debe tener al menos 8 caracteres, una mayuscula, una minuscula y un numero.
+- La contrasena de registro debe tener al menos 8 caracteres, una mayuscula, una minuscula, un numero y un caracter especial (!@#$%^&*).
 - Los roles Admin y Manager no se pueden asignar en el auto-registro.
 - El contenedor Docker corre como usuario no-root.
 - Los headers de seguridad HTTP estan configurados (X-Frame-Options, X-Content-Type-Options, etc.).
 - Rate limiting activo en endpoints criticos (login, registro, logout).
 - Los errores de base de datos no se exponen al cliente.
+- Los errores de configuracion no exponen nombres de variables al cliente.
+- Proteccion CSRF en todos los endpoints que modifican datos (POST, PUT, DELETE, PATCH).
+- El puerto 5000 solo escucha en localhost (127.0.0.1) en el contenedor Docker.
+- El puerto MariaDB (3307) solo escucha en localhost (127.0.0.1).
 - Debug mode desactivado por defecto (activar con `FLASK_DEBUG=1`).
+- Bootstrap actualizado a v5.3.3 con SRI en CDN.
+- Dependencias de Python fijadas a versiones exactas en `requirements.txt`.
+- Imagen Docker basada en `python:3.12.8-slim` (version fija).

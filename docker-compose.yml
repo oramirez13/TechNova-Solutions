@@ -40,8 +40,8 @@ services:
     restart: unless-stopped
     env_file: .env.docker
     ports:
-      # Puerto 5000 en el host para acceder desde el navegador
-      - "5000:5000"
+      # Puerto 5000 en el host, solo accesible desde localhost
+      - "127.0.0.1:5000:5000"
     depends_on:
       # Espera a que MariaDB este saludable antes de iniciar Flask
       db:

@@ -93,8 +93,29 @@ def generar_token_csrf():
     return session["_csrf_token"]
 
 
+@app.context_processor
+def inyectar_csrf_token():
+    return {"csrf_token": generar_token_csrf()}
+
+
 def verificar_token_csrf(token):
     return secrets.compare_digest(token, session.get("_csrf_token", ""))
+
+
+def requiere_csrf():
+    """Verifica token CSRF en requests que modifican datos (POST, PUT, DELETE, PATCH)."""
+    if request.method not in ("POST", "PUT", "DELETE", "PATCH"):
+        return None
+    if request.content_type and "application/json" in request.content_type:
+        datos = request.get_json(silent=True) or {}
+        token = datos.pop("csrf_token", None)
+    else:
+        token = request.form.get("csrf_token")
+    if not token:
+        token = request.headers.get("X-CSRF-Token")
+    if not token or not verificar_token_csrf(token):
+        return jsonify({"ok": False, "mensaje": "Token CSRF invalido."}), 403
+    return None
 
 
 class ConfiguracionError(RuntimeError):
@@ -135,7 +156,7 @@ def validar_email(email):
 
 
 def validar_contraseña(password):
-    """Valida que el password tenga al menos 8 caracteres, una mayuscula, una minuscula y un numero."""
+    """Valida que el password tenga al menos 8 caracteres, una mayuscula, una minuscula, un numero y un caracter especial."""
     if len(password) < 8:
         return False
     if not re.search(r"[A-Z]", password):
@@ -143,6 +164,8 @@ def validar_contraseña(password):
     if not re.search(r"[a-z]", password):
         return False
     if not re.search(r"[0-9]", password):
+        return False
+    if not re.search(r"[!@#$%^&*]", password):
         return False
     return True
 
@@ -456,14 +479,17 @@ def asegurar_estructura():
 def preparar_aplicacion():
     if request.endpoint != "static":
         asegurar_estructura()
+    # Verificar CSRF en requests que modifican datos
+    error = requiere_csrf()
+    if error:
+        return error
 
 
 @app.errorhandler(ConfiguracionError)
 def manejar_configuracion_error(error):
-    mensaje = str(error)
     if request.path.startswith("/api/"):
-        return jsonify({"ok": False, "mensaje": mensaje}), 500
-    return mensaje, 500
+        return jsonify({"ok": False, "mensaje": "Error de configuracion del servidor."}), 500
+    return "Error de configuracion del servidor.", 500
 
 
 @app.route("/")
@@ -532,7 +558,7 @@ def api_registro():
             jsonify(
                 {
                     "ok": False,
-                    "mensaje": "La contraseña debe tener al menos 8 caracteres, una mayuscula, una minuscula y un numero.",
+                    "mensaje":                 "La contraseña debe tener al menos 8 caracteres, una mayuscula, una minuscula, un numero y un caracter especial (!@#$%^&*).",
                 }
             ),
             400,
@@ -660,9 +686,9 @@ def api_login():
 @app.route("/api/logout", methods=["POST"])
 @limiter.limit("10 per minute")
 def api_logout():
-    token = request.headers.get("X-CSRF-Token") or (request.get_json() or {}).get("csrf_token")
-    if not token or not verificar_token_csrf(token):
-        return jsonify({"ok": False, "mensaje": "Token CSRF invalido."}), 403
+    error = requiere_csrf()
+    if error:
+        return error
     session.clear()
     return jsonify({"ok": True, "mensaje": "Sesion cerrada."}), 200
 
