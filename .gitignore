@@ -1,3 +1,4 @@
 .env
+.credenciales_technova.md
 __pycache__/
 *.pyc

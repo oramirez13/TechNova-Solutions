@@ -1,71 +1,69 @@
 # TechNova Solutions
 
-Aplicación web en Flask para la gestión de usuarios, proyectos, sprints, tareas tipo kanban y avances, usando MySQL como base de datos.
+TechNova Solutions es una aplicación web desarrollada con Flask y MariaDB para administrar proyectos de trabajo, sprints, tareas tipo kanban y avances del equipo.
 
-## Estado actual del proyecto
+El sistema está pensado como una herramienta sencilla para organizar el flujo de trabajo de un equipo técnico. Permite registrar usuarios, iniciar sesión, crear proyectos, planificar sprints, asignar tareas y guardar avances con horas trabajadas.
 
-El sistema implementa actualmente:
+## Funcionalidades principales
 
-- autenticación con Flask sessions
-- registro y login con contraseñas hasheadas
-- gestión de proyectos con responsable asignado
-- gestión de sprints por proyecto
-- tablero kanban con tareas, prioridades, responsables y fechas límite
-- registro de avances por sprint
-- validaciones de permisos para evitar que usuarios no autorizados editen recursos ajenos
-- página de dashboard y página informativa de blog
+- Registro e inicio de sesión de usuarios.
+- Contraseñas guardadas con hash seguro.
+- Dashboard privado para usuarios autenticados.
+- Gestión de proyectos con responsable asignado.
+- Gestión de sprints por proyecto.
+- Tablero kanban para tareas.
+- Estados de tareas: backlog, pendiente, en proceso y completada.
+- Asignación de tareas a usuarios activos.
+- Registro de avances por sprint.
+- Control básico de permisos por usuario y rol.
+- Página informativa tipo blog.
 
-El alcance actual no incluye una pantalla de auditoría ni un módulo visual de reportes con gráficos.
+## Tecnologías usadas
 
-## Errores detectados en la revisión
+- Python
+- Flask
+- MariaDB o MySQL compatible
+- mysql-connector-python
+- HTML
+- CSS
+- JavaScript
 
-1. Las contraseñas se almacenaban y validaban en texto plano.
-2. La aplicación dependía de secretos y credenciales hardcodeadas en `app.py`.
-3. Cualquier usuario autenticado podía editar o eliminar proyectos, sprints y tareas ajenas.
-4. El número de sprint no tenía una restricción única en base de datos.
-5. El formulario permitía enviar `objetivo_completado`, pero el backend lo ignoraba al crear sprints.
-6. Proyectos y sprints aceptaban fechas inconsistentes, incluyendo fin anterior al inicio.
-7. El filtro del dashboard mezclaba `sprint_id` y `sprint_numero`, lo que podía mostrar tareas del sprint equivocado.
+## Estructura del proyecto
 
-## Registro de cambios aplicados
+```text
+technova_solutions/
+├── app.py
+├── requirements.txt
+├── database/
+│   └── schema.sql
+├── docs/
+│   └── GUIA_TECNICA_TECHNOVA.md
+├── static/
+│   ├── css/
+│   ├── img/
+│   └── js/
+└── templates/
+    ├── index.html
+    ├── dashboard.html
+    ├── blog.html
+    ├── 404.html
+    └── _navbar.html
+```
 
-- Se migró el registro y login a contraseñas con hash usando `werkzeug.security`.
-- Se eliminaron secretos fijos del código y ahora la app exige variables de entorno para la conexión MySQL.
-- Se agregaron validaciones de permisos para que solo el responsable del proyecto o un rol `Manager`/`Admin` pueda gestionar proyectos, sprints, tareas y avances.
-- Se validan rangos de fechas y formatos antes de escribir en la base de datos.
-- Se guarda correctamente el avance inicial de un sprint.
-- Se reforzó la consistencia del modelo con un índice único por `proyecto_id + numero` en sprints.
-- Se corrigió el filtro de tareas por sprint en el dashboard.
-- Se actualizaron los datos de ejemplo del esquema para usar contraseñas hasheadas sin cambiar las credenciales de acceso.
+## Archivos importantes
 
-## Requisitos
+- `app.py`: contiene la aplicación Flask, rutas HTML, rutas API, validaciones y conexión con la base de datos.
+- `database/schema.sql`: crea las tablas, relaciones, índices y datos iniciales.
+- `requirements.txt`: lista las dependencias de Python necesarias para ejecutar el proyecto.
+- `templates/`: contiene las vistas HTML del login, dashboard, blog y errores.
+- `static/css/style.css`: contiene los estilos visuales.
+- `static/js/script.js`: maneja el registro y login.
+- `static/js/dashboard.js`: maneja proyectos, sprints, tareas, kanban y avances.
+- `docs/GUIA_TECNICA_TECHNOVA.md`: explica el proyecto con más detalle técnico.
 
-- Python 3.10 o superior
-- MySQL Server 8.x o compatible
-- `pip`
-- Terminal con acceso a `mysql`
+## Modelo de datos
 
-## Estructura importante
-
-- `app.py`: servidor Flask
-- `database/schema.sql`: creación de base de datos, tablas, índices y datos de ejemplo
-- `requirements.txt`: dependencias del proyecto
-- `docs/GUIA_TECNICA_TECHNOVA.md`: guía didáctica profunda del sistema y sus procesos
-- `templates/`: vistas HTML (`index`, `dashboard`, `blog`, `404` y componentes compartidos)
-- `static/js/dashboard.js`: lógica del dashboard, proyectos, sprints y kanban
-- `static/js/script.js`: login y registro
-
-## Guía de estudio recomendada
-
-Si quieres aprender el proyecto a fondo, empieza por:
-
-- `docs/GUIA_TECNICA_TECHNOVA.md`
-
-Esa guía explica arquitectura, tecnologías, procesos, seguridad, modelo de datos y responsabilidades de cada archivo antes de entrar al detalle del código.
-
-## Modelo de datos actual
-
-El esquema maneja estas tablas principales:
+La base de datos usa estas tablas principales:
 
 - `usuarios`
 - `proyectos`
@@ -75,21 +73,22 @@ El esquema maneja estas tablas principales:
 
 Relación general:
 
-- un usuario puede ser responsable de varios proyectos
-- un proyecto puede tener varios sprints
-- un proyecto puede tener varias tareas
-- una tarea puede estar asociada a un sprint o permanecer en backlog
-- un sprint puede tener varios avances
+- Un usuario puede ser responsable de varios proyectos.
+- Un proyecto puede tener varios sprints.
+- Un proyecto puede tener varias tareas.
+- Una tarea puede estar asignada a un usuario.
+- Una tarea puede pertenecer a un sprint o quedar en backlog.
+- Un sprint puede tener varios avances.
 
-## Pantallas y rutas principales
+## Rutas principales
 
-Páginas HTML:
+Páginas:
 
-- `/`: login y registro
-- `/dashboard`: gestión de proyectos, sprints y tablero kanban
-- `/blog`: página informativa de TechNova Solutions
+- `/`: pantalla de inicio de sesión y registro.
+- `/dashboard`: panel principal para administrar proyectos, sprints, tareas y avances.
+- `/blog`: página informativa del proyecto.
 
-API principal:
+API:
 
 - `POST /api/registro`
 - `POST /api/login`
@@ -104,264 +103,184 @@ API principal:
 - `PUT|DELETE /api/tarea/<tarea_id>`
 - `PATCH /api/tarea/<tarea_id>/kanban`
 - `GET|POST /api/avances/<sprint_id>`
+- `PUT|DELETE /api/avance/<avance_id>`
 
-## 1. Entrar al proyecto
+## Requisitos
 
-Desde la carpeta padre:
+- Python 3.10 o superior.
+- MariaDB o MySQL compatible.
+- `pip`.
+- Terminal con acceso al comando `mariadb`.
+
+## Instalación
+
+Entrar a la carpeta del proyecto:
 
 ```bash
 cd technova_solutions
 ```
 
-## 2. Crear y activar entorno virtual
-
-En Linux o macOS:
+Crear un entorno virtual:
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
 ```
 
-En Windows con PowerShell:
+Activar el entorno virtual en Linux o macOS:
+
+```bash
+source .venv/bin/activate
+```
+
+Activar el entorno virtual en Windows con PowerShell:
 
 ```powershell
-python -m venv venv
-venv\Scripts\Activate.ps1
+.venv\Scripts\Activate.ps1
 ```
 
-## 3. Instalar dependencias
+Instalar dependencias:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Esto instala:
+## Configuración de base de datos
 
-- `Flask`
-- `mysql-connector-python`
+El proyecto usa variables de entorno para conectarse a MariaDB. Las credenciales reales no deben publicarse en GitHub.
 
-## 4. Crear la base de datos en MySQL
-
-La app ya no usa credenciales embebidas en el código. Se recomienda crear este usuario:
-
-- Base de datos: `technova`
-- Usuario: `technova_app`
-- Password: `technova_app_2026`
-- Host: `localhost`
-
-### Opción recomendada: crear un usuario específico para la app
-
-Entrar a MySQL como administrador:
+Crear una copia local del archivo de ejemplo:
 
 ```bash
-mysql -u root -p
+cp .env.example .env
 ```
 
-Luego ejecutar:
+Editar `.env` y completar los valores locales:
+
+```bash
+TECHNOVA_DB_HOST=localhost
+TECHNOVA_DB_PORT=3307
+TECHNOVA_DB_USER=technova_app
+TECHNOVA_DB_PASSWORD=CAMBIA_ESTA_PASSWORD
+TECHNOVA_DB_NAME=technova
+TECHNOVA_SECRET_KEY=CAMBIA_ESTA_CLAVE
+```
+
+El archivo `.env` está ignorado por Git para evitar publicar información sensible.
+
+## Crear base de datos y usuario
+
+Entrar a MariaDB como administrador:
+
+```bash
+mariadb -u root -p
+```
+
+Si MariaDB no permite entrar con `root` y muestra `Access denied for user 'root'@'localhost'`, probar:
+
+```bash
+sudo mariadb
+```
+
+Crear la base de datos y el usuario de la aplicación. Reemplazar `CAMBIA_ESTA_PASSWORD` por la contraseña local privada:
 
 ```sql
 CREATE DATABASE IF NOT EXISTS technova
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_spanish_ci;
 
-CREATE USER IF NOT EXISTS 'technova_app'@'localhost' IDENTIFIED BY 'technova_app_2026';
+CREATE USER IF NOT EXISTS 'technova_app'@'localhost' IDENTIFIED BY 'CAMBIA_ESTA_PASSWORD';
+ALTER USER 'technova_app'@'localhost' IDENTIFIED BY 'CAMBIA_ESTA_PASSWORD';
 GRANT ALL PRIVILEGES ON technova.* TO 'technova_app'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
 ```
 
-## 5. Cargar el esquema y los datos iniciales
+## Cargar tablas y datos iniciales
 
-Desde la carpeta `technova_solutions`, ejecutar:
-
-```bash
-mysql -u technova_app -p technova < database/schema.sql
-```
-
-Cuando MySQL pida la contraseña, ingresar:
-
-```text
-technova_app_2026
-```
-
-Este script:
-
-- crea las tablas `usuarios`, `proyectos`, `sprints`, `tareas` y `avances`
-- agrega índices
-- inserta datos de ejemplo
-- ejecuta consultas de verificación al final
-
-## 6. Configurar variables de entorno
-
-Este paso ahora es obligatorio.
-
-La aplicacion carga automaticamente un archivo local `technova_solutions/.env` si existe. Puedes partir de `.env.example`.
-
-Si quieres definirlas manualmente en Linux o macOS:
+Ejecutar el esquema desde la carpeta del proyecto:
 
 ```bash
-export TECHNOVA_DB_HOST=localhost
-export TECHNOVA_DB_PORT=3307
-export TECHNOVA_DB_USER=technova_app
-export TECHNOVA_DB_PASSWORD=technova_app_2026
-export TECHNOVA_DB_NAME=technova
-export TECHNOVA_SECRET_KEY="cambia-esta-clave-por-una-segura"
+mariadb -u technova_app -p -h 127.0.0.1 -P 3307 technova < database/schema.sql
 ```
 
-En Windows con PowerShell:
+Cuando MariaDB pida la contraseña, ingresar la contraseña privada configurada localmente.
 
-```powershell
-$env:TECHNOVA_DB_HOST="localhost"
-$env:TECHNOVA_DB_PORT="3307"
-$env:TECHNOVA_DB_USER="technova_app"
-$env:TECHNOVA_DB_PASSWORD="technova_app_2026"
-$env:TECHNOVA_DB_NAME="technova"
-$env:TECHNOVA_SECRET_KEY="cambia-esta-clave-por-una-segura"
-```
+## Ejecutar la aplicación
 
-Tambien puedes copiar el ejemplo:
-
-```bash
-cp .env.example .env
-```
-
-## 7. Levantar la aplicación Flask
+Con el entorno virtual activo:
 
 ```bash
 python app.py
 ```
 
-La app arranca en:
+Abrir la aplicación en el navegador:
 
 ```text
 http://127.0.0.1:5000
 ```
 
-`app.py` levanta Flask en modo debug y en el puerto `5000`.
+## Verificación rápida
 
-## 8. Probar acceso con usuarios de ejemplo
-
-El `schema.sql` inserta estos usuarios:
-
-- `orami@technova.cr` / `017240`
-- `maria@technova.cr` / `123456`
-- `carlos@technova.cr` / `123456`
-- `ana@technova.cr` / `123456`
-
-Puedes iniciar sesión con cualquiera desde la pantalla principal. Las contraseñas ya se almacenan con hash, pero las credenciales de ejemplo siguen siendo las mismas.
-
-## 9. Qué puedes probar en la aplicación
-
-Después de iniciar sesión puedes:
-
-- crear, editar, pausar y eliminar proyectos
-- asignar o reasignar responsables de proyecto según permisos
-- crear y editar sprints
-- registrar el porcentaje de avance del sprint
-- crear, editar, mover y eliminar tareas en el tablero kanban
-- asignar tareas a usuarios activos
-- asociar tareas a un sprint o dejarlas en backlog
-- registrar avances dentro de un sprint con tipo de avance, horas trabajadas y estado de tarea
-- navegar a la página `/blog`
-
-## 10. Verificación rápida si algo falla
-
-### Verificar que MySQL esté activo
+Verificar conexión a MariaDB:
 
 ```bash
-mysql -u technova_app -p -e "SHOW DATABASES;"
+mariadb -u technova_app -p -h 127.0.0.1 -P 3307 technova
 ```
 
-### Verificar tablas creadas
+Verificar tablas:
 
 ```bash
-mysql -u technova_app -p technova -e "SHOW TABLES;"
+mariadb -u technova_app -p -h 127.0.0.1 -P 3307 technova -e "SHOW TABLES;"
 ```
 
-### Verificar usuarios cargados
+Verificar usuarios:
 
 ```bash
-mysql -u technova_app -p technova -e "SELECT id, nombre, correo, rol FROM usuarios;"
+mariadb -u technova_app -p -h 127.0.0.1 -P 3307 technova -e "SELECT id, nombre, correo, rol FROM usuarios;"
 ```
 
-### Verificar sprints, tareas y avances
+## Archivo privado local
+
+Este repositorio puede tener un archivo local llamado `.credenciales_technova.md` con pasos internos y contraseñas privadas.
+
+Ese archivo está ignorado por Git y no debe subirse a GitHub.
+
+## Problemas comunes
+
+### `mysql: Deprecated program name`
+
+En MariaDB moderno puede aparecer este aviso:
+
+```text
+mysql: Deprecated program name. It will be removed in a future release
+```
+
+No es un error del proyecto. Usar `mariadb` en vez de `mysql`.
+
+### `Access denied for user 'root'@'localhost'`
+
+Este error significa que MariaDB no aceptó el acceso con el usuario `root`.
+
+En Linux puede solucionarse entrando con:
 
 ```bash
-mysql -u technova_app -p technova -e "SELECT id, proyecto_id, numero, nombre, estado FROM sprints;"
-mysql -u technova_app -p technova -e "SELECT id, proyecto_id, sprint_id, titulo, estado, posicion FROM tareas;"
-mysql -u technova_app -p technova -e "SELECT id, sprint_id, usuario_id, tipo_avance, horas_trabajadas FROM avances;"
+sudo mariadb
 ```
 
-## 11. Problemas comunes
+### Error de conexión desde Flask
 
-### Error de conexión a MySQL
+Revisar:
 
-Revisa:
+- Que MariaDB esté encendido.
+- Que exista la base de datos `technova`.
+- Que exista el usuario `technova_app`.
+- Que el puerto configurado coincida con `TECHNOVA_DB_PORT`.
+- Que la contraseña local de `.env` coincida con la contraseña configurada en MariaDB.
 
-- que el servicio de MySQL esté encendido
-- que el usuario y la contraseña coincidan
-- que `TECHNOVA_DB_HOST`, `TECHNOVA_DB_USER`, `TECHNOVA_DB_PASSWORD` y `TECHNOVA_DB_NAME` estén correctos
+## Seguridad
 
-### Error `Access denied for user`
-
-Vuelve a crear el usuario y permisos:
-
-```sql
-CREATE USER IF NOT EXISTS 'technova_app'@'localhost' IDENTIFIED BY 'technova_app_2026';
-GRANT ALL PRIVILEGES ON technova.* TO 'technova_app'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-### Error porque las tablas ya existen o ya hay datos
-
-Si quieres reiniciar todo desde cero:
-
-```bash
-mysql -u root -p -e "DROP DATABASE IF EXISTS technova;"
-mysql -u root -p -e "CREATE DATABASE technova CHARACTER SET utf8mb4 COLLATE utf8mb4_spanish_ci;"
-mysql -u technova_app -p technova < database/schema.sql
-```
-
-### Error de permisos al editar proyectos, sprints, tareas o avances
-
-Revisa:
-
-- si el usuario autenticado es el responsable del proyecto
-- si el usuario tiene rol `Manager` o `Admin`
-- si el recurso pertenece al proyecto correcto
-
-La aplicación bloquea cambios sobre proyectos ajenos para usuarios sin privilegios.
-
-## Flujo rápido
-
-Si ya tienes MySQL instalado, el flujo mínimo sería:
-
-```bash
-cd technova_solutions
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-mysql -u root -p
-```
-
-Dentro de MySQL:
-
-```sql
-CREATE DATABASE IF NOT EXISTS technova CHARACTER SET utf8mb4 COLLATE utf8mb4_spanish_ci;
-CREATE USER IF NOT EXISTS 'technova_app'@'localhost' IDENTIFIED BY 'technova_app_2026';
-GRANT ALL PRIVILEGES ON technova.* TO 'technova_app'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-De vuelta en terminal:
-
-```bash
-mysql -u technova_app -p technova < database/schema.sql
-export TECHNOVA_DB_HOST=localhost
-export TECHNOVA_DB_USER=technova_app
-export TECHNOVA_DB_PASSWORD=technova_app_2026
-export TECHNOVA_DB_NAME=technova
-export TECHNOVA_SECRET_KEY="cambia-esta-clave-por-una-segura"
-python app.py
-```
+- No subir `.env` a GitHub.
+- No subir `.credenciales_technova.md` a GitHub.
+- No escribir contraseñas reales en el README.
+- Cambiar `TECHNOVA_SECRET_KEY` antes de usar el proyecto fuera de un entorno local.
+- Usar contraseñas diferentes para cada ambiente.
