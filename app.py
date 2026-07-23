@@ -1,4 +1,5 @@
 from datetime import date
+import hmac
 import os
 import re
 import secrets
@@ -41,14 +42,14 @@ app = Flask(__name__)
 
 # Secret key: en produccion debe ser una clave real de 64+ caracteres
 _secret = os.getenv("TECHNOVA_SECRET_KEY", "")
-if not _secret or len(_secret) < 32:
-    _secret = secrets.token_hex(32)
+if not _secret or len(_secret) < 64:
+    _secret = secrets.token_hex(64)
 app.secret_key = _secret
 
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=os.getenv("TECHNOVA_COOKIE_SECURE", "0") == "1",
+    SESSION_COOKIE_SECURE=os.getenv("TECHNOVA_COOKIE_SECURE", "1") == "1",
     SESSION_COOKIE_NAME="technova_session",
     PERMANENT_SESSION_Lifetime=3600,
 )
@@ -81,9 +82,18 @@ schema_asegurado = False
 def agregar_headers_seguridad(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' https://code.jquery.com https://cdn.jsdelivr.net https://unpkg.com; "
+        "style-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com 'unsafe-inline'; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data:; "
+        "connect-src 'self'"
+    )
+    if request.is_secure:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 
@@ -105,6 +115,9 @@ def verificar_token_csrf(token):
 def requiere_csrf():
     """Verifica token CSRF en requests que modifican datos (POST, PUT, DELETE, PATCH)."""
     if request.method not in ("POST", "PUT", "DELETE", "PATCH"):
+        return None
+    # Excluir endpoints de autenticacion (no hay sesion existente que proteger)
+    if request.path in ("/api/login", "/api/registro"):
         return None
     if request.content_type and "application/json" in request.content_type:
         datos = request.get_json(silent=True) or {}
@@ -170,6 +183,12 @@ def validar_contraseña(password):
     return True
 
 
+def validar_longitud_campo(valor, nombre_campo, maximo):
+    """Valida que un campo string no exceda la longitud maxima permitida."""
+    if valor and len(valor) > maximo:
+        raise ValueError(f"El campo {nombre_campo} no puede exceder {maximo} caracteres.")
+
+
 def normalizar_correo(correo):
     return (correo or "").strip().lower()
 
@@ -191,7 +210,7 @@ def verificar_password(password_guardado, password_ingresado):
     if password_tiene_hash(password_guardado):
         return check_password_hash(password_guardado, password_ingresado)
 
-    return password_guardado == password_ingresado
+    return hmac.compare_digest(password_guardado, password_ingresado)
 
 
 def parsear_fecha(valor, nombre_campo, permitir_nulo=False):
@@ -224,6 +243,9 @@ def convertir_entero(valor, permitir_nulo=False):
 
 
 def existe_registro(cursor, tabla, registro_id, filtro_activo=False):
+    TABLAS_PERMITIDAS = {"usuarios", "proyectos", "sprints", "tareas", "avances"}
+    if tabla not in TABLAS_PERMITIDAS:
+        raise ValueError(f"Tabla no permitida: {tabla}")
     sql = f"SELECT id FROM {tabla} WHERE id = %s"
     if filtro_activo:
         sql += " AND activo = 1"
@@ -558,9 +580,15 @@ def api_registro():
             jsonify(
                 {
                     "ok": False,
-                    "mensaje":                 "La contraseña debe tener al menos 8 caracteres, una mayuscula, una minuscula, un numero y un caracter especial (!@#$%^&*).",
+                    "mensaje": "La contraseña debe tener al menos 8 caracteres, una mayuscula, una minuscula, un numero y un caracter especial (!@#$%^&*).",
                 }
             ),
+            400,
+        )
+
+    if len(nombre) > 100:
+        return (
+            jsonify({"ok": False, "mensaje": "El nombre no puede exceder 100 caracteres."}),
             400,
         )
 
@@ -666,6 +694,7 @@ def api_login():
             "correo": usuario["correo"],
             "rol": usuario["rol"],
         }
+        session.clear()
         session["usuario"] = datos_sesion
 
         return jsonify({"ok": True, "usuario": datos_sesion}), 200
@@ -686,9 +715,6 @@ def api_login():
 @app.route("/api/logout", methods=["POST"])
 @limiter.limit("10 per minute")
 def api_logout():
-    error = requiere_csrf()
-    if error:
-        return error
     session.clear()
     return jsonify({"ok": True, "mensaje": "Sesion cerrada."}), 200
 
@@ -787,6 +813,12 @@ def _put_proyecto(proyecto_id):
     fecha_fin_estimada = datos.get("fecha_fin_estimada")
     estado = (datos.get("estado") or "activo").strip()
     responsable_id = convertir_entero(datos.get("responsable_id"), permitir_nulo=True)
+
+    try:
+        validar_longitud_campo(nombre, "nombre", 150)
+        validar_longitud_campo(descripcion, "descripcion", 1000)
+    except ValueError as err:
+        return jsonify({"ok": False, "mensaje": str(err)}), 400
 
     if not nombre:
         return (
@@ -990,6 +1022,12 @@ def _post_proyecto():
     estado = (datos.get("estado") or "activo").strip()
     responsable_id = convertir_entero(datos.get("responsable_id"), permitir_nulo=True)
 
+    try:
+        validar_longitud_campo(nombre, "nombre", 150)
+        validar_longitud_campo(descripcion, "descripcion", 1000)
+    except ValueError as err:
+        return jsonify({"ok": False, "mensaje": str(err)}), 400
+
     if responsable_id is None:
         responsable_id = session["usuario"]["id"]
 
@@ -1142,6 +1180,12 @@ def _put_sprint(sprint_id):
         datos.get("objetivo_completado"), permitir_nulo=True
     )
 
+    try:
+        validar_longitud_campo(nombre, "nombre", 150)
+        validar_longitud_campo(descripcion, "descripcion", 1000)
+    except ValueError as err:
+        return jsonify({"ok": False, "mensaje": str(err)}), 400
+
     if not nombre or not fecha_inicio or not fecha_fin:
         return (
             jsonify(
@@ -1282,6 +1326,12 @@ def _post_sprint(proyecto_id):
     objetivo_completado = convertir_entero(
         datos.get("objetivo_completado"), permitir_nulo=True
     )
+
+    try:
+        validar_longitud_campo(nombre, "nombre", 150)
+        validar_longitud_campo(descripcion, "descripcion", 1000)
+    except ValueError as err:
+        return jsonify({"ok": False, "mensaje": str(err)}), 400
 
     if not nombre or not fecha_inicio or not fecha_fin:
         return (
@@ -1552,6 +1602,12 @@ def _post_tarea(proyecto_id):
     estado = (datos.get("estado") or "pendiente").strip()
     fecha_limite = datos.get("fecha_limite") or None
 
+    try:
+        validar_longitud_campo(titulo, "titulo", 150)
+        validar_longitud_campo(descripcion, "descripcion", 1000)
+    except ValueError as err:
+        return jsonify({"ok": False, "mensaje": str(err)}), 400
+
     if not titulo:
         return (
             jsonify({"ok": False, "mensaje": "El titulo de la tarea es obligatorio."}),
@@ -1657,6 +1713,12 @@ def _put_tarea(tarea_id):
     prioridad = (datos.get("prioridad") or "media").strip()
     estado = (datos.get("estado") or "pendiente").strip()
     fecha_limite = datos.get("fecha_limite") or None
+
+    try:
+        validar_longitud_campo(titulo, "titulo", 150)
+        validar_longitud_campo(descripcion, "descripcion", 1000)
+    except ValueError as err:
+        return jsonify({"ok": False, "mensaje": str(err)}), 400
 
     if not titulo:
         return (
@@ -1893,6 +1955,19 @@ def _post_avance(sprint_id):
     estado_tarea = (datos.get("estado_tarea") or "avances").strip()
     usuario_id = session["usuario"]["id"]
 
+    try:
+        validar_longitud_campo(descripcion, "descripcion", 2000)
+    except ValueError as err:
+        return jsonify({"ok": False, "mensaje": str(err)}), 400
+
+    if horas_trabajadas is not None:
+        try:
+            horas_trabajadas = float(horas_trabajadas)
+            if horas_trabajadas < 0 or horas_trabajadas > 999.99:
+                return jsonify({"ok": False, "mensaje": "Horas trabajadas debe estar entre 0 y 999.99."}), 400
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "mensaje": "Horas trabajadas debe ser un numero valido."}), 400
+
     if not descripcion:
         return (
             jsonify(
@@ -1971,6 +2046,19 @@ def _put_avance(avance_id):
     tipo_avance = (datos.get("tipo_avance") or "caracteristica").strip()
     horas_trabajadas = datos.get("horas_trabajadas")
     estado_tarea = (datos.get("estado_tarea") or "avances").strip()
+
+    try:
+        validar_longitud_campo(descripcion, "descripcion", 2000)
+    except ValueError as err:
+        return jsonify({"ok": False, "mensaje": str(err)}), 400
+
+    if horas_trabajadas is not None:
+        try:
+            horas_trabajadas = float(horas_trabajadas)
+            if horas_trabajadas < 0 or horas_trabajadas > 999.99:
+                return jsonify({"ok": False, "mensaje": "Horas trabajadas debe estar entre 0 y 999.99."}), 400
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "mensaje": "Horas trabajadas debe ser un numero valido."}), 400
 
     if not descripcion:
         return (
