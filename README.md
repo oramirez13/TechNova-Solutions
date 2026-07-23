@@ -34,6 +34,10 @@ El sistema está pensado como una herramienta sencilla para organizar el flujo d
 technova_solutions/
 ├── app.py
 ├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+├── .env.example
+├── .dockerignore
 ├── database/
 │   └── schema.sql
 ├── docs/
@@ -107,10 +111,15 @@ API:
 
 ## Requisitos
 
+**Opcion local:**
 - Python 3.10 o superior.
 - MariaDB o MySQL compatible.
 - `pip`.
 - Terminal con acceso al comando `mariadb`.
+
+**Opcion Docker:**
+- Docker Engine o Docker Desktop.
+- Docker Compose v2.
 
 ## Instalación
 
@@ -207,6 +216,8 @@ Cuando MariaDB pida la contraseña, ingresar la contraseña privada configurada 
 
 ## Ejecutar la aplicación
 
+### Instalación local
+
 Con el entorno virtual activo:
 
 ```bash
@@ -217,6 +228,61 @@ Abrir la aplicación en el navegador:
 
 ```text
 http://127.0.0.1:5000
+```
+
+### Ejecutar con Docker
+
+Clonar el repositorio:
+
+```bash
+git clone https://github.com/oramirez13/TechNova-Solutions.git
+cd TechNova-Solutions
+```
+
+Crear el archivo de credenciales para Docker:
+
+```bash
+cp .env.example .env.docker
+```
+
+Editar `.env.docker` con las credenciales reales:
+
+```bash
+MARIADB_ROOT_PASSWORD=contraseña_root
+MARIADB_DATABASE=technova
+MARIADB_USER=technova_app
+MARIADB_PASSWORD=contraseña_app
+TECHNOVA_SECRET_KEY=clave_secreta_flask
+```
+
+Levantar los contenedores:
+
+```bash
+docker compose up -d
+```
+
+Verificar que los servicios estén corriendo:
+
+```bash
+docker compose ps
+```
+
+Abrir la aplicación en el navegador:
+
+```text
+http://127.0.0.1:5000
+```
+
+Detener los contenedores:
+
+```bash
+docker compose down
+```
+
+Detener y eliminar datos (volumen de MariaDB):
+
+```bash
+docker compose down -v
 ```
 
 ## Verificación rápida
