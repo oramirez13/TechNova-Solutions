@@ -105,11 +105,18 @@ $(document).ready(function () {
       marcarValido($('#regRol'), 'errRegRol');
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       marcarInvalido(
         $('#regPassword'),
         'errRegPassword',
-        'La contraseña debe tener al menos 6 caracteres.'
+        'La contrasena debe tener al menos 8 caracteres, una mayuscula, una minuscula y un numero.'
+      );
+      valido = false;
+    } else if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      marcarInvalido(
+        $('#regPassword'),
+        'errRegPassword',
+        'La contrasena debe contener al menos una mayuscula, una minuscula y un numero.'
       );
       valido = false;
     } else {

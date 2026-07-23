@@ -21,8 +21,9 @@ services:
       MARIADB_USER: ${MARIADB_USER}
       MARIADB_PASSWORD: ${MARIADB_PASSWORD}
     ports:
-      # Puerto 3307 en el host para que Laravel pueda usar el 3306
-      - "3307:3306"
+      # Puerto 3307 en el host para Laravel (cambiar a solo interna en produccion)
+      # En produccion, remover esta linea y acceder solo via red interna
+      - "127.0.0.1:3307:3306"
     volumes:
       # Volumen para persistir los datos entre reinicios
       - mariadb_data:/var/lib/mysql

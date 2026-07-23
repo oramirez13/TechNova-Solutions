@@ -1,8 +1,11 @@
 from datetime import date
 import os
 import re
+import secrets
 
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import mysql.connector
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -35,11 +38,27 @@ cargar_variables_locales()
 
 
 app = Flask(__name__)
-app.secret_key = os.getenv("TECHNOVA_SECRET_KEY") or os.urandom(32).hex()
+
+# Secret key: en produccion debe ser una clave real de 64+ caracteres
+_secret = os.getenv("TECHNOVA_SECRET_KEY", "")
+if not _secret or len(_secret) < 32:
+    _secret = secrets.token_hex(32)
+app.secret_key = _secret
+
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.getenv("TECHNOVA_COOKIE_SECURE", "0") == "1",
+    SESSION_COOKIE_NAME="technova_session",
+    PERMANENT_SESSION_Lifetime=3600,
+)
+
+# Rate limiting global
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["200 per minute"],
+    storage_uri="memory://",
 )
 
 ESTADOS_SPRINT = {"planificado", "en_progreso", "completado"}
@@ -54,7 +73,28 @@ ESTADOS_AVANCE_TAREA = {
     "completada",
 }
 ROLES_PRIVILEGIADOS = {"Admin", "Manager"}
+ROLES_SELLO_REGISTRO = {"Developer", "Designer", "QA"}
 schema_asegurado = False
+
+
+@app.after_request
+def agregar_headers_seguridad(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    return response
+
+
+def generar_token_csrf():
+    if "_csrf_token" not in session:
+        session["_csrf_token"] = secrets.token_hex(32)
+    return session["_csrf_token"]
+
+
+def verificar_token_csrf(token):
+    return secrets.compare_digest(token, session.get("_csrf_token", ""))
 
 
 class ConfiguracionError(RuntimeError):
@@ -95,7 +135,16 @@ def validar_email(email):
 
 
 def validar_contraseña(password):
-    return len(password) >= 6
+    """Valida que el password tenga al menos 8 caracteres, una mayuscula, una minuscula y un numero."""
+    if len(password) < 8:
+        return False
+    if not re.search(r"[A-Z]", password):
+        return False
+    if not re.search(r"[a-z]", password):
+        return False
+    if not re.search(r"[0-9]", password):
+        return False
+    return True
 
 
 def normalizar_correo(correo):
@@ -458,6 +507,7 @@ def pagina_no_encontrada(error):
 
 
 @app.route("/api/registro", methods=["POST"])
+@limiter.limit("5 per minute")
 def api_registro():
     datos = request.get_json() or {}
 
@@ -475,21 +525,21 @@ def api_registro():
         )
 
     if not correo or not validar_email(correo):
-        return jsonify({"ok": False, "mensaje": "Correo electrónico inválido."}), 400
+        return jsonify({"ok": False, "mensaje": "Correo electronico invalido."}), 400
 
     if not password or not validar_contraseña(password):
         return (
             jsonify(
                 {
                     "ok": False,
-                    "mensaje": "La contraseña debe tener al menos 6 caracteres.",
+                    "mensaje": "La contraseña debe tener al menos 8 caracteres, una mayuscula, una minuscula y un numero.",
                 }
             ),
             400,
         )
 
-    roles_validos = ["Manager", "Developer", "Designer", "QA", "Admin"]
-    if rol not in roles_validos:
+    # Solo roles seguros para auto-registro (Admin/Manager no se puede asignar solo)
+    if rol not in ROLES_SELLO_REGISTRO:
         rol = "Developer"
 
     conn = None
@@ -530,7 +580,7 @@ def api_registro():
         if conn:
             conn.rollback()
         return (
-            jsonify({"ok": False, "mensaje": "Error de base de datos: " + str(err)}),
+            jsonify({"ok": False, "mensaje": "Error interno del servidor."}),
             500,
         )
 
@@ -542,6 +592,7 @@ def api_registro():
 
 
 @app.route("/api/login", methods=["POST"])
+@limiter.limit("10 per minute")
 def api_login():
     datos = request.get_json() or {}
 
@@ -595,7 +646,7 @@ def api_login():
 
     except mysql.connector.Error as err:
         return (
-            jsonify({"ok": False, "mensaje": "Error de base de datos: " + str(err)}),
+            jsonify({"ok": False, "mensaje": "Error interno del servidor."}),
             500,
         )
 
@@ -607,9 +658,13 @@ def api_login():
 
 
 @app.route("/api/logout", methods=["POST"])
+@limiter.limit("10 per minute")
 def api_logout():
+    token = request.headers.get("X-CSRF-Token") or (request.get_json() or {}).get("csrf_token")
+    if not token or not verificar_token_csrf(token):
+        return jsonify({"ok": False, "mensaje": "Token CSRF invalido."}), 403
     session.clear()
-    return jsonify({"ok": True, "mensaje": "Sesión cerrada."}), 200
+    return jsonify({"ok": True, "mensaje": "Sesion cerrada."}), 200
 
 
 @app.route("/api/usuarios", methods=["GET"])
@@ -634,7 +689,7 @@ def api_usuarios():
         return jsonify({"ok": True, "usuarios": cursor.fetchall()}), 200
 
     except mysql.connector.Error as err:
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -644,6 +699,7 @@ def api_usuarios():
 
 
 @app.route("/api/proyectos", methods=["GET", "POST"])
+@limiter.limit("60 per minute")
 def api_proyectos():
     if not session.get("usuario"):
         return jsonify({"ok": False, "mensaje": "No autorizado."}), 401
@@ -687,7 +743,7 @@ def _delete_proyecto(proyecto_id):
     except mysql.connector.Error as err:
         if conn:
             conn.rollback()
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -794,7 +850,7 @@ def _put_proyecto(proyecto_id):
     except mysql.connector.Error as err:
         if conn:
             conn.rollback()
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -804,6 +860,7 @@ def _put_proyecto(proyecto_id):
 
 
 @app.route("/api/proyectos/<int:proyecto_id>/estado", methods=["PATCH"])
+@limiter.limit("30 per minute")
 def api_proyecto_estado(proyecto_id):
     if not session.get("usuario"):
         return jsonify({"ok": False, "mensaje": "No autorizado."}), 401
@@ -843,7 +900,7 @@ def api_proyecto_estado(proyecto_id):
     except mysql.connector.Error as err:
         if conn:
             conn.rollback()
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -888,7 +945,7 @@ def _get_proyectos():
         return jsonify({"ok": True, "proyectos": cursor.fetchall()}), 200
 
     except mysql.connector.Error as err:
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -987,7 +1044,7 @@ def _post_proyecto():
     except mysql.connector.Error as err:
         if conn:
             conn.rollback()
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -997,6 +1054,7 @@ def _post_proyecto():
 
 
 @app.route("/api/sprints/<int:proyecto_id>", methods=["GET", "POST"])
+@limiter.limit("60 per minute")
 def api_sprints(proyecto_id):
     if not session.get("usuario"):
         return jsonify({"ok": False, "mensaje": "No autorizado."}), 401
@@ -1027,7 +1085,7 @@ def _get_sprints(proyecto_id):
         return jsonify({"ok": True, "sprints": cursor.fetchall()}), 200
 
     except mysql.connector.Error as err:
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -1037,6 +1095,7 @@ def _get_sprints(proyecto_id):
 
 
 @app.route("/api/sprint/<int:sprint_id>", methods=["PUT"])
+@limiter.limit("30 per minute")
 def api_sprint_item(sprint_id):
     if not session.get("usuario"):
         return jsonify({"ok": False, "mensaje": "No autorizado."}), 401
@@ -1176,7 +1235,7 @@ def _put_sprint(sprint_id):
                 ),
                 409,
             )
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -1304,7 +1363,7 @@ def _post_sprint(proyecto_id):
                 ),
                 409,
             )
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -1314,6 +1373,7 @@ def _post_sprint(proyecto_id):
 
 
 @app.route("/api/tareas/<int:proyecto_id>", methods=["GET", "POST"])
+@limiter.limit("60 per minute")
 def api_tareas(proyecto_id):
     if not session.get("usuario"):
         return jsonify({"ok": False, "mensaje": "No autorizado."}), 401
@@ -1325,6 +1385,7 @@ def api_tareas(proyecto_id):
 
 
 @app.route("/api/tarea/<int:tarea_id>", methods=["PUT", "DELETE"])
+@limiter.limit("30 per minute")
 def api_tarea_item(tarea_id):
     if not session.get("usuario"):
         return jsonify({"ok": False, "mensaje": "No autorizado."}), 401
@@ -1336,6 +1397,7 @@ def api_tarea_item(tarea_id):
 
 
 @app.route("/api/tarea/<int:tarea_id>/kanban", methods=["PATCH"])
+@limiter.limit("30 per minute")
 def api_tarea_kanban(tarea_id):
     if not session.get("usuario"):
         return jsonify({"ok": False, "mensaje": "No autorizado."}), 401
@@ -1398,7 +1460,7 @@ def api_tarea_kanban(tarea_id):
     except mysql.connector.Error as err:
         if conn:
             conn.rollback()
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -1444,7 +1506,7 @@ def _get_tareas(proyecto_id):
         return jsonify({"ok": True, "tareas": cursor.fetchall()}), 200
 
     except mysql.connector.Error as err:
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -1550,7 +1612,7 @@ def _post_tarea(proyecto_id):
     except mysql.connector.Error as err:
         if conn:
             conn.rollback()
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -1682,7 +1744,7 @@ def _put_tarea(tarea_id):
     except mysql.connector.Error as err:
         if conn:
             conn.rollback()
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -1720,7 +1782,7 @@ def _delete_tarea(tarea_id):
     except mysql.connector.Error as err:
         if conn:
             conn.rollback()
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -1730,6 +1792,7 @@ def _delete_tarea(tarea_id):
 
 
 @app.route("/api/avances/<int:sprint_id>", methods=["GET", "POST"])
+@limiter.limit("60 per minute")
 def api_avances(sprint_id):
     if not session.get("usuario"):
         return jsonify({"ok": False, "mensaje": "No autorizado."}), 401
@@ -1741,6 +1804,7 @@ def api_avances(sprint_id):
 
 
 @app.route("/api/avance/<int:avance_id>", methods=["PUT", "DELETE"])
+@limiter.limit("30 per minute")
 def api_avance_item(avance_id):
     if not session.get("usuario"):
         return jsonify({"ok": False, "mensaje": "No autorizado."}), 401
@@ -1785,7 +1849,7 @@ def _get_avances(sprint_id):
         return jsonify({"ok": True, "avances": cursor.fetchall()}), 200
 
     except mysql.connector.Error as err:
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -1865,7 +1929,7 @@ def _post_avance(sprint_id):
     except mysql.connector.Error as err:
         if conn:
             conn.rollback()
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -1947,7 +2011,7 @@ def _put_avance(avance_id):
     except mysql.connector.Error as err:
         if conn:
             conn.rollback()
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -1989,7 +2053,7 @@ def _delete_avance(avance_id):
     except mysql.connector.Error as err:
         if conn:
             conn.rollback()
-        return jsonify({"ok": False, "mensaje": str(err)}), 500
+        return jsonify({"ok": False, "mensaje": "Error interno del servidor."}), 500
 
     finally:
         if cursor:
@@ -1999,4 +2063,4 @@ def _delete_avance(avance_id):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=os.getenv("FLASK_DEBUG", "0") == "1", port=5000)

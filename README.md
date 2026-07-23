@@ -345,8 +345,15 @@ Revisar:
 
 ## Seguridad
 
-- No subir `.env` a GitHub.
+- No subir `.env` ni `.env.docker` a GitHub.
 - No subir `.credenciales_technova.md` a GitHub.
-- No escribir contraseñas reales en el README.
+- No escribir contrasenas reales en el README.
 - Cambiar `TECHNOVA_SECRET_KEY` antes de usar el proyecto fuera de un entorno local.
-- Usar contraseñas diferentes para cada ambiente.
+- Usar contrasenas diferentes para cada ambiente.
+- La contrasena de registro debe tener al menos 8 caracteres, una mayuscula, una minuscula y un numero.
+- Los roles Admin y Manager no se pueden asignar en el auto-registro.
+- El contenedor Docker corre como usuario no-root.
+- Los headers de seguridad HTTP estan configurados (X-Frame-Options, X-Content-Type-Options, etc.).
+- Rate limiting activo en endpoints criticos (login, registro, logout).
+- Los errores de base de datos no se exponen al cliente.
+- Debug mode desactivado por defecto (activar con `FLASK_DEBUG=1`).
