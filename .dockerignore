@@ -1,0 +1,27 @@
+# Archivos sensibles
+.env
+.env.*
+!.env.example
+
+# Documentacion
+docs/
+README.md
+LICENSE
+.credenciales_technova.md
+
+# Base de datos local (ya se carga via docker-entrypoint-initdb.d)
+database/
+
+# Entorno virtual
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/

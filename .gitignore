@@ -1,4 +1,5 @@
 .env
+.env.docker
 .credenciales_technova.md
 __pycache__/
 *.pyc
